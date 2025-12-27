@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "813278422446",
+    "project_id": "ligaroca-bc6ed",
+    "storage_bucket": "ligaroca-bc6ed.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:813278422446:android:79a425f756cc96e6a1143f",
+        "android_client_info": {
+          "package_name": "com.example.liga_roca"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAW3pnFwAwR-yk2A0_qLVj4xB20jBzxEEQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
