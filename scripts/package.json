@@ -1,0 +1,12 @@
+{
+  "name": "liga-roca-seeder",
+  "version": "1.0.0",
+  "description": "Script para cargar datos iniciales a Firebase",
+  "main": "seed.js",
+  "scripts": {
+    "start": "node seed.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^11.5.0"
+  }
+}

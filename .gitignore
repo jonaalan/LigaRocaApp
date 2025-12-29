@@ -66,3 +66,10 @@ app.*.map.json
 # Exceptions to above rules.
 !/android/app/src/main/AndroidManifest.xml
 !/ios/Runner/Info.plist
+
+# --- FIREBASE SECURITY ---
+# Ignorar claves de API y configuración sensible
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
+scripts/serviceAccountKey.json

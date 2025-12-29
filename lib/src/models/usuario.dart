@@ -1,6 +1,6 @@
 import 'equipo.dart';
 
-enum TipoUsuario {
+enum RolUsuario {
   hincha,
   admin,
 }
@@ -9,14 +9,27 @@ class Usuario {
   final String id;
   final String nombre;
   final String email;
-  final TipoUsuario tipo;
-  final Equipo? equipoFavorito;
+  final RolUsuario rol;
+  final String? equipoFavoritoId;
+  final String? equipoFavoritoNombre;
 
   Usuario({
     required this.id,
     required this.nombre,
     required this.email,
-    required this.tipo,
-    this.equipoFavorito,
+    required this.rol,
+    this.equipoFavoritoId,
+    this.equipoFavoritoNombre,
   });
+
+  factory Usuario.fromMap(String id, Map<String, dynamic> map) {
+    return Usuario(
+      id: id,
+      nombre: map['nombre'] ?? '',
+      email: map['email'] ?? '',
+      rol: map['rol'] == 'admin' ? RolUsuario.admin : RolUsuario.hincha,
+      equipoFavoritoId: map['equipoFavoritoId'],
+      equipoFavoritoNombre: map['equipoFavoritoNombre'],
+    );
+  }
 }

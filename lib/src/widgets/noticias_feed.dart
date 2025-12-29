@@ -36,7 +36,7 @@ class NoticiasFeed extends StatelessWidget {
           StreamBuilder<List<Noticia>>(
             stream: firestoreService.getNoticiasEquipo(equipoId!),
             builder: (context, snapshot) {
-              if (snapshot.hasError) return SliverToBoxAdapter(child: Text('Error: ${snapshot.error}'));
+              if (snapshot.hasError) return SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.all(16), child: Text('Error cargando noticias de equipo: ${snapshot.error}')));
               if (!snapshot.hasData) return const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator()));
 
               final noticias = snapshot.data!;
@@ -74,10 +74,19 @@ class NoticiasFeed extends StatelessWidget {
         StreamBuilder<List<Noticia>>(
           stream: firestoreService.getNoticiasGenerales(),
           builder: (context, snapshot) {
-            if (snapshot.hasError) return SliverToBoxAdapter(child: Text('Error: ${snapshot.error}'));
+            if (snapshot.hasError) return SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.all(16), child: Text('Error cargando noticias generales: ${snapshot.error}')));
             if (!snapshot.hasData) return const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator()));
 
             final noticias = snapshot.data!;
+
+            if (noticias.isEmpty) {
+               return const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Text('No hay noticias generales cargadas aún.'),
+                  ),
+                );
+            }
 
             return SliverList(
               delegate: SliverChildBuilderDelegate(

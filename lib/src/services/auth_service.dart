@@ -1,13 +1,29 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/equipo.dart';
+import '../models/usuario.dart';
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final auth.FirebaseAuth _auth = auth.FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // Obtener usuario actual
-  User? get currentUser => _auth.currentUser;
+  // Obtener usuario actual de Firebase Auth
+  auth.User? get currentUser => _auth.currentUser;
+
+  // Obtener el modelo completo de Usuario (con rol)
+  Future<Usuario?> getUsuarioActual() async {
+    if (currentUser == null) return null;
+    
+    try {
+      DocumentSnapshot doc = await _db.collection('usuarios').doc(currentUser!.uid).get();
+      if (doc.exists) {
+        return Usuario.fromMap(doc.id, doc.data() as Map<String, dynamic>);
+      }
+    } catch (e) {
+      print('Error obteniendo usuario: $e');
+    }
+    return null;
+  }
 
   // Registro con email, password y equipo favorito
   Future<void> registrarUsuario({
@@ -18,7 +34,7 @@ class AuthService {
   }) async {
     try {
       // 1. Crear usuario en Auth
-      UserCredential credencial = await _auth.createUserWithEmailAndPassword(
+      auth.UserCredential credencial = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -49,7 +65,7 @@ class AuthService {
     await _auth.signOut();
   }
 
-  // Obtener datos del usuario desde Firestore
+  // Método legacy para compatibilidad (opcional, mejor usar getUsuarioActual)
   Future<Map<String, dynamic>?> getUserData() async {
     if (currentUser == null) return null;
     DocumentSnapshot doc = await _db.collection('usuarios').doc(currentUser!.uid).get();

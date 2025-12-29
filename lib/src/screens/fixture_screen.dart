@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/partido.dart';
 import '../services/firestore_service.dart';
+import 'partido_detalle_screen.dart';
 
 class FixtureList extends StatelessWidget {
   const FixtureList({super.key});
@@ -32,66 +33,145 @@ class FixtureList extends StatelessWidget {
             final partido = partidos[index];
             return Card(
               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  children: [
-                    Text(
-                      dateFormat.format(partido.fecha),
-                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+              elevation: 2,
+              child: InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PartidoDetalleScreen(partido: partido),
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Local
-                        Expanded(
-                          child: Column(
-                            children: [
-                              Text(partido.local.nombre, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            ],
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
+                    children: [
+                      // Fecha y Estado
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            dateFormat.format(partido.fecha),
+                            style: TextStyle(color: Colors.grey[600], fontSize: 12),
                           ),
-                        ),
-
-                        // Resultado o VS
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: partido.finalizado ? Colors.black87 : Colors.grey[200],
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            partido.finalizado
-                                ? '${partido.golesLocal} - ${partido.golesVisitante}'
-                                : 'VS',
-                            style: TextStyle(
-                              color: partido.finalizado ? Colors.white : Colors.black,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
+                          if (partido.estado == EstadoPartido.jugando)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 8.0),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(4)),
+                                child: const Text('EN VIVO', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      // Equipos y Resultado
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Local
+                          Expanded(
+                            child: Column(
+                              children: [
+                                _EscudoEquipo(url: partido.local.escudoUrl),
+                                const SizedBox(height: 4),
+                                Text(
+                                  partido.local.nombre, 
+                                  textAlign: TextAlign.center, 
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-
-                        // Visitante
-                        Expanded(
-                          child: Column(
-                            children: [
-                              Text(partido.visitante.nombre, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            ],
+                          
+                          // Marcador Central
+                          Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 10),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: partido.estado == EstadoPartido.jugando 
+                                  ? Colors.red.withOpacity(0.1) 
+                                  : (partido.finalizado ? Colors.black87 : Colors.grey[200]),
+                              borderRadius: BorderRadius.circular(8),
+                              border: partido.estado == EstadoPartido.jugando ? Border.all(color: Colors.red) : null,
+                            ),
+                            child: Text(
+                              partido.estado == EstadoPartido.pendiente
+                                  ? 'VS'
+                                  : '${partido.golesLocal} - ${partido.golesVisitante}',
+                              style: TextStyle(
+                                color: partido.finalizado ? Colors.white : Colors.black,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 20,
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    if (partido.finalizado)
+
+                          // Visitante
+                          Expanded(
+                            child: Column(
+                              children: [
+                                _EscudoEquipo(url: partido.visitante.escudoUrl),
+                                const SizedBox(height: 4),
+                                Text(
+                                  partido.visitante.nombre, 
+                                  textAlign: TextAlign.center, 
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      
+                      if (partido.finalizado)
                         Padding(
                           padding: const EdgeInsets.only(top: 8.0),
                           child: Text('Finalizado', style: TextStyle(color: Colors.green[700], fontSize: 12, fontWeight: FontWeight.bold)),
                         ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             );
           },
+        );
+      },
+    );
+  }
+}
+
+class _EscudoEquipo extends StatelessWidget {
+  final String url;
+
+  const _EscudoEquipo({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    if (url.isEmpty) {
+      return const CircleAvatar(
+        radius: 25,
+        backgroundColor: Colors.grey,
+        child: Icon(Icons.shield, color: Colors.white),
+      );
+    }
+    return Image.network(
+      url,
+      height: 50,
+      width: 50,
+      fit: BoxFit.contain,
+      errorBuilder: (context, error, stackTrace) {
+        return const CircleAvatar(
+          radius: 25,
+          backgroundColor: Colors.grey,
+          child: Icon(Icons.error, color: Colors.white),
         );
       },
     );

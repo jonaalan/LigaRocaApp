@@ -6,10 +6,11 @@ enum TipoNoticia {
 class Noticia {
   final String id;
   final TipoNoticia tipo;
-  final String? equipoId; // Nullable si es general
+  final String? equipoId;
   final String titulo;
   final String contenido;
   final DateTime fecha;
+  final String? imageUrl; // Nuevo campo para la imagen
 
   Noticia({
     required this.id,
@@ -18,5 +19,6 @@ class Noticia {
     required this.titulo,
     required this.contenido,
     required this.fecha,
+    this.imageUrl,
   });
 }
