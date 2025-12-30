@@ -20,12 +20,31 @@ class FirestoreService {
     });
   }
 
-  // ADMIN: Actualizar Equipo
+  // Actualizar Equipo y propagar cambios a los partidos
   Future<void> actualizarEquipo(String id, String nombre, String escudoUrl) async {
+    // 1. Actualizar el equipo maestro
     await _db.collection('equipos').doc(id).update({
       'nombre': nombre,
       'escudoUrl': escudoUrl,
     });
+
+    // 2. Actualizar partidos donde es LOCAL
+    final partidosLocal = await _db.collection('partidos').where('localId', isEqualTo: id).get();
+    for (var doc in partidosLocal.docs) {
+      await doc.reference.update({
+        'localNombre': nombre,
+        'localEscudo': escudoUrl,
+      });
+    }
+
+    // 3. Actualizar partidos donde es VISITANTE
+    final partidosVisitante = await _db.collection('partidos').where('visitanteId', isEqualTo: id).get();
+    for (var doc in partidosVisitante.docs) {
+      await doc.reference.update({
+        'visitanteNombre': nombre,
+        'visitanteEscudo': escudoUrl,
+      });
+    }
   }
 
   // --- NOTICIAS ---
@@ -116,16 +135,17 @@ class FirestoreService {
         
         List<EventoPartido> eventos = [];
         if (data['eventos'] != null) {
-          eventos = (data['eventos'] as List).map((e) {
+          eventos = List.from(data['eventos']).map<EventoPartido>((e) {
+            final map = e as Map<String, dynamic>;
             return EventoPartido(
-              id: e['id'] ?? '',
-              tipo: TipoEvento.values.firstWhere((t) => t.toString() == e['tipo'], orElse: () => TipoEvento.gol),
-              minuto: e['minuto'] ?? 0,
-              jugadorNombre: e['jugadorNombre'] ?? '',
-              camiseta: e['camiseta'] ?? 0,
-              equipoId: e['equipoId'] ?? '',
-              jugadorSale: e['jugadorSale'],
-              camisetaSale: e['camisetaSale'],
+              id: map['id'] ?? '',
+              tipo: TipoEvento.values.firstWhere((t) => t.toString() == map['tipo'], orElse: () => TipoEvento.gol),
+              minuto: map['minuto'] ?? 0,
+              jugadorNombre: map['jugadorNombre'] ?? '',
+              camiseta: map['camiseta'] ?? 0,
+              equipoId: map['equipoId'] ?? '',
+              jugadorSale: map['jugadorSale'],
+              camisetaSale: map['camisetaSale'],
             );
           }).toList();
         }
@@ -253,6 +273,27 @@ class FirestoreService {
       }
 
       transaction.update(docRef, updates);
+      
+      // --- NOTIFICACIÓN ---
+      String titulo = '';
+      String cuerpo = '';
+      
+      if (evento.tipo == TipoEvento.gol) {
+        titulo = '¡GOL de ${evento.jugadorNombre}!';
+        cuerpo = 'Minuto ${evento.minuto}';
+      } else if (evento.tipo == TipoEvento.roja) {
+        titulo = 'Tarjeta ROJA para ${evento.jugadorNombre}';
+        cuerpo = 'El equipo se queda con uno menos.';
+      }
+      
+      if (titulo.isNotEmpty) {
+        _db.collection('notificaciones_pendientes').add({
+          'topic': 'equipo_${evento.equipoId}',
+          'titulo': titulo,
+          'cuerpo': cuerpo,
+          'fecha': FieldValue.serverTimestamp(),
+        });
+      }
     });
   }
 }

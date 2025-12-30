@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:liga_roca/src/app.dart';
+import 'package:liga_roca/src/services/notification_service.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -9,8 +10,9 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   
-  // Eliminamos la llamada bloqueante a inicializarDatosPrueba para acelerar el inicio.
-  // Si necesitas poblar datos, puedes hacerlo manualmente o en segundo plano.
+  // Inicializar notificaciones
+  final notificationService = NotificationService();
+  await notificationService.init();
 
   runApp(const MyApp());
 }

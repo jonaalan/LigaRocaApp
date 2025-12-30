@@ -49,58 +49,93 @@ class _NoticiaDetalleScreenState extends State<NoticiaDetalleScreen> {
 
     if (confirm == true) {
       await _firestoreService.borrarNoticia(widget.noticia.id);
-      if (mounted) Navigator.pop(context); // Volver al feed
+      if (mounted) Navigator.pop(context);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 250.0,
+            expandedHeight: 300.0, // Aumenté un poco la altura
             floating: false,
             pinned: true,
+            // Iconos con sombra para que se vean sobre cualquier imagen
+            leading: Container(
+              margin: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Colors.black26,
+                shape: BoxShape.circle,
+              ),
+              child: const BackButton(color: Colors.white),
+            ),
             actions: _isAdmin
                 ? [
-                    IconButton(
-                      icon: const Icon(Icons.edit),
-                      tooltip: 'Editar',
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => EditarNoticiaScreen(noticia: widget.noticia),
-                          ),
-                        ).then((_) => setState(() {})); // Recargar al volver
-                      },
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: const BoxDecoration(color: Colors.black26, shape: BoxShape.circle),
+                      child: IconButton(
+                        icon: const Icon(Icons.edit, color: Colors.white),
+                        tooltip: 'Editar',
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => EditarNoticiaScreen(noticia: widget.noticia),
+                            ),
+                          ).then((_) => setState(() {}));
+                        },
+                      ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.delete),
-                      tooltip: 'Eliminar',
-                      onPressed: _borrarNoticia,
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: const BoxDecoration(color: Colors.black26, shape: BoxShape.circle),
+                      child: IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.white),
+                        tooltip: 'Eliminar',
+                        onPressed: _borrarNoticia,
+                      ),
                     ),
+                    const SizedBox(width: 8),
                   ]
                 : null,
             flexibleSpace: FlexibleSpaceBar(
-              background: widget.noticia.imageUrl != null && widget.noticia.imageUrl!.isNotEmpty
-                  ? Image.network(
-                      widget.noticia.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey[300]),
-                    )
-                  : Container(
-                      color: Colors.green[800],
-                      child: const Center(child: Icon(Icons.newspaper, size: 80, color: Colors.white54)),
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  widget.noticia.imageUrl != null && widget.noticia.imageUrl!.isNotEmpty
+                      ? Image.network(
+                          widget.noticia.imageUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey[300]),
+                        )
+                      : Container(
+                          color: Colors.green[800],
+                          child: const Center(child: Icon(Icons.newspaper, size: 80, color: Colors.white54)),
+                        ),
+                  // Gradiente para mejorar lectura si hubiera texto sobre la imagen
+                  const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.black45, Colors.transparent],
+                        stops: [0.0, 0.3],
+                      ),
                     ),
+                  ),
+                ],
+              ),
             ),
           ),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(20.0),
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0), // Más margen
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -116,33 +151,45 @@ class _NoticiaDetalleScreenState extends State<NoticiaDetalleScreen> {
                       style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
                   
                   // Título
                   Text(
                     widget.noticia.titulo,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                      fontWeight: FontWeight.w800, // Más negrita
+                      color: isDark ? Colors.white : Colors.black87,
+                      height: 1.2,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   
                   // Fecha
-                  Text(
-                    dateFormat.format(widget.noticia.fecha),
-                    style: TextStyle(color: Colors.grey[600]),
+                  Row(
+                    children: [
+                      Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
+                      const SizedBox(width: 4),
+                      Text(
+                        dateFormat.format(widget.noticia.fecha),
+                        style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
+                  const Divider(),
+                  const SizedBox(height: 32),
                   
                   // Contenido
                   Text(
                     widget.noticia.contenido,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      height: 1.6,
-                      fontSize: 16,
+                      height: 1.8, // Mayor interlineado para lectura cómoda
+                      fontSize: 18, // Letra un poco más grande
+                      color: isDark ? Colors.white70 : Colors.black87,
                     ),
                   ),
+                  
+                  const SizedBox(height: 50), // Espacio final
                 ],
               ),
             ),

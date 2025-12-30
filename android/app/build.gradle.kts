@@ -25,10 +25,12 @@ android {
         applicationId = "com.example.liga_roca"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion // Firebase Auth requires minSdk 23
+        minSdk = flutter.minSdkVersion // Forzamos minSdk a 23 para Firebase
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        
+        multiDexEnabled = true // Habilitamos MultiDex
     }
 
     buildTypes {
@@ -38,6 +40,10 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+}
+
+dependencies {
+    implementation("androidx.multidex:multidex:2.0.1")
 }
 
 flutter {

@@ -74,6 +74,7 @@ class FixtureList extends StatelessWidget {
                         children: [
                           // Local
                           Expanded(
+                            flex: 3,
                             child: Column(
                               children: [
                                 _EscudoEquipo(url: partido.local.escudoUrl),
@@ -90,30 +91,36 @@ class FixtureList extends StatelessWidget {
                           ),
                           
                           // Marcador Central
-                          Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 10),
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: partido.estado == EstadoPartido.jugando 
-                                  ? Colors.red.withOpacity(0.1) 
-                                  : (partido.finalizado ? Colors.black87 : Colors.grey[200]),
-                              borderRadius: BorderRadius.circular(8),
-                              border: partido.estado == EstadoPartido.jugando ? Border.all(color: Colors.red) : null,
-                            ),
-                            child: Text(
-                              partido.estado == EstadoPartido.pendiente
-                                  ? 'VS'
-                                  : '${partido.golesLocal} - ${partido.golesVisitante}',
-                              style: TextStyle(
-                                color: partido.finalizado ? Colors.white : Colors.black,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 20,
+                          Expanded(
+                            flex: 2,
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 4),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: partido.estado == EstadoPartido.jugando 
+                                    ? Colors.red.withOpacity(0.1) 
+                                    : (partido.finalizado ? Colors.black87 : Colors.grey[200]),
+                                borderRadius: BorderRadius.circular(8),
+                                border: partido.estado == EstadoPartido.jugando ? Border.all(color: Colors.red) : null,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  partido.estado == EstadoPartido.pendiente
+                                      ? 'VS'
+                                      : '${partido.golesLocal} - ${partido.golesVisitante}',
+                                  style: TextStyle(
+                                    color: partido.finalizado ? Colors.white : Colors.black,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
 
                           // Visitante
                           Expanded(
+                            flex: 3,
                             child: Column(
                               children: [
                                 _EscudoEquipo(url: partido.visitante.escudoUrl),
@@ -157,21 +164,21 @@ class _EscudoEquipo extends StatelessWidget {
   Widget build(BuildContext context) {
     if (url.isEmpty) {
       return const CircleAvatar(
-        radius: 25,
+        radius: 20, // Reduje un poco el tamaño para evitar overflow vertical
         backgroundColor: Colors.grey,
-        child: Icon(Icons.shield, color: Colors.white),
+        child: Icon(Icons.shield, color: Colors.white, size: 20),
       );
     }
     return Image.network(
       url,
-      height: 50,
-      width: 50,
+      height: 40, // Tamaño fijo controlado
+      width: 40,
       fit: BoxFit.contain,
       errorBuilder: (context, error, stackTrace) {
         return const CircleAvatar(
-          radius: 25,
+          radius: 20,
           backgroundColor: Colors.grey,
-          child: Icon(Icons.error, color: Colors.white),
+          child: Icon(Icons.error, color: Colors.white, size: 20),
         );
       },
     );
