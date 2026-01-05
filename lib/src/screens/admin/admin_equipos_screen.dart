@@ -11,6 +11,10 @@ class AdminEquiposScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Gestionar Equipos')),
+      floatingActionButton: FloatingActionButton(
+        child: const Icon(Icons.add),
+        onPressed: () => _mostrarDialogoCrear(context, firestoreService),
+      ),
       body: StreamBuilder<List<Equipo>>(
         stream: firestoreService.getEquipos(),
         builder: (context, snapshot) {
@@ -40,6 +44,44 @@ class AdminEquiposScreen extends StatelessWidget {
             },
           );
         },
+      ),
+    );
+  }
+
+  void _mostrarDialogoCrear(BuildContext context, FirestoreService service) {
+    final nombreCtrl = TextEditingController();
+    final escudoCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Nuevo Equipo'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nombreCtrl,
+              decoration: const InputDecoration(labelText: 'Nombre del Equipo'),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: escudoCtrl,
+              decoration: const InputDecoration(labelText: 'URL del Escudo'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+          ElevatedButton(
+            onPressed: () {
+              if (nombreCtrl.text.isNotEmpty) {
+                service.crearEquipo(nombreCtrl.text, escudoCtrl.text);
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Crear'),
+          ),
+        ],
       ),
     );
   }

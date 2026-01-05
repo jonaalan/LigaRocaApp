@@ -4,6 +4,7 @@ import '../widgets/noticias_feed.dart';
 import '../widgets/web_container.dart';
 import 'fixture_screen.dart';
 import 'registro_screen.dart';
+import 'tabla_posiciones_screen.dart';
 import 'admin/admin_noticias_screen.dart';
 import 'admin/admin_fixture_screen.dart';
 import 'admin/admin_equipos_screen.dart'; // Importamos admin equipos
@@ -57,11 +58,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<Widget> screens = [
       NoticiasFeed(equipoId: equipoId, nombreEquipo: nombreEquipo),
       const FixtureList(),
+      const TablaPosicionesScreen(),
     ];
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_selectedIndex == 0 ? 'Liga Roca' : 'Fixture'),
+        title: Text(_selectedIndex == 0 ? 'Liga Roca' : (_selectedIndex == 1 ? 'Fixture' : 'Posiciones')),
         actions: [
           // Menú Admin
           if (rol == 'admin')
@@ -116,6 +118,10 @@ class _HomeScreenState extends State<HomeScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.sports_soccer),
             label: 'Fixture',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.format_list_numbered),
+            label: 'Posiciones',
           ),
         ],
         currentIndex: _selectedIndex,
