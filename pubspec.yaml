@@ -16,6 +16,7 @@ dependencies:
   # Estado y Utilidades
   provider: ^6.0.0
   intl: ^0.18.0
+  url_launcher: ^6.2.0
   
   # Firebase (Últimas versiones compatibles con Flutter 3.x)
   firebase_core: ^3.1.0
@@ -32,7 +33,7 @@ dev_dependencies:
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/icon/icon.png"
+  image_path: "assets/icon/Chitologo1024.png"
   min_sdk_android: 21 # Opcional, para asegurar compatibilidad
 
 flutter:

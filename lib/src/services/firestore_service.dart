@@ -2,9 +2,37 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/noticia.dart';
 import '../models/equipo.dart';
 import '../models/partido.dart';
+import '../models/publicidad.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+
+  // --- PUBLICIDAD ---
+  Stream<List<Publicidad>> getPublicidades() {
+    return _db.collection('publicidades').where('activa', isEqualTo: true).snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return Publicidad(
+          id: doc.id,
+          imageUrl: data['imageUrl'] ?? '',
+          linkUrl: data['linkUrl'],
+          activa: data['activa'] ?? true,
+        );
+      }).toList();
+    });
+  }
+
+  Future<void> crearPublicidad(String imageUrl, String? linkUrl) async {
+    await _db.collection('publicidades').add({
+      'imageUrl': imageUrl,
+      'linkUrl': linkUrl,
+      'activa': true,
+    });
+  }
+
+  Future<void> borrarPublicidad(String id) async {
+    await _db.collection('publicidades').doc(id).delete();
+  }
 
   // --- EQUIPOS ---
   Stream<List<Equipo>> getEquipos() {
