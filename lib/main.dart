@@ -6,13 +6,20 @@ import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
   
-  // Inicializar notificaciones
-  final notificationService = NotificationService();
-  await notificationService.init();
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    
+    // Inicializar notificaciones de manera segura
+    final notificationService = NotificationService();
+    await notificationService.init();
+    
+  } catch (e) {
+    print("Error durante la inicialización de Firebase: $e");
+    // Continuamos ejecutando la app aunque falle Firebase (podría mostrar un error en UI luego)
+  }
 
   runApp(const MyApp());
 }

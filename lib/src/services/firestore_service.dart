@@ -2,9 +2,37 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/noticia.dart';
 import '../models/equipo.dart';
 import '../models/partido.dart';
+import '../models/publicidad.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+
+  // --- PUBLICIDAD ---
+  Stream<List<Publicidad>> getPublicidades() {
+    return _db.collection('publicidades').where('activa', isEqualTo: true).snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return Publicidad(
+          id: doc.id,
+          imageUrl: data['imageUrl'] ?? '',
+          linkUrl: data['linkUrl'],
+          activa: data['activa'] ?? true,
+        );
+      }).toList();
+    });
+  }
+
+  Future<void> crearPublicidad(String imageUrl, String? linkUrl) async {
+    await _db.collection('publicidades').add({
+      'imageUrl': imageUrl,
+      'linkUrl': linkUrl,
+      'activa': true,
+    });
+  }
+
+  Future<void> borrarPublicidad(String id) async {
+    await _db.collection('publicidades').doc(id).delete();
+  }
 
   // --- EQUIPOS ---
   Stream<List<Equipo>> getEquipos() {
@@ -17,6 +45,13 @@ class FirestoreService {
           escudoUrl: data['escudoUrl'] ?? '',
         );
       }).toList();
+    });
+  }
+
+  Future<void> crearEquipo(String nombre, String escudoUrl) async {
+    await _db.collection('equipos').add({
+      'nombre': nombre,
+      'escudoUrl': escudoUrl,
     });
   }
 
@@ -223,15 +258,66 @@ class FirestoreService {
   }
 
   Future<void> iniciarPartido(String id) async {
-    await _db.collection('partidos').doc(id).update({
+    final docRef = _db.collection('partidos').doc(id);
+    final doc = await docRef.get();
+    if (!doc.exists) return;
+    
+    final data = doc.data()!;
+    final localId = data['localId'];
+    final visitanteId = data['visitanteId'];
+    final localNombre = data['localNombre'];
+    final visitanteNombre = data['visitanteNombre'];
+
+    await docRef.update({
       'estado': EstadoPartido.jugando.toString(),
       'tiempoInicio': FieldValue.serverTimestamp(),
+    });
+
+    // Notificar inicio
+    _db.collection('notificaciones_pendientes').add({
+      'topic': 'equipo_$localId',
+      'titulo': '¡Comenzó el partido!',
+      'cuerpo': 'Ya juegan $localNombre vs $visitanteNombre',
+      'fecha': FieldValue.serverTimestamp(),
+    });
+    _db.collection('notificaciones_pendientes').add({
+      'topic': 'equipo_$visitanteId',
+      'titulo': '¡Comenzó el partido!',
+      'cuerpo': 'Ya juegan $localNombre vs $visitanteNombre',
+      'fecha': FieldValue.serverTimestamp(),
     });
   }
 
   Future<void> finalizarPartido(String id) async {
-    await _db.collection('partidos').doc(id).update({
+    final docRef = _db.collection('partidos').doc(id);
+    final doc = await docRef.get();
+    if (!doc.exists) return;
+    
+    final data = doc.data()!;
+    final localId = data['localId'];
+    final visitanteId = data['visitanteId'];
+    final localNombre = data['localNombre'];
+    final visitanteNombre = data['visitanteNombre'];
+    final golesLocal = data['golesLocal'];
+    final golesVisitante = data['golesVisitante'];
+
+    await docRef.update({
       'estado': EstadoPartido.finalizado.toString(),
+    });
+
+    // Notificar final
+    String resultado = '$localNombre $golesLocal - $golesVisitante $visitanteNombre';
+    _db.collection('notificaciones_pendientes').add({
+      'topic': 'equipo_$localId',
+      'titulo': 'Final del partido',
+      'cuerpo': resultado,
+      'fecha': FieldValue.serverTimestamp(),
+    });
+    _db.collection('notificaciones_pendientes').add({
+      'topic': 'equipo_$visitanteId',
+      'titulo': 'Final del partido',
+      'cuerpo': resultado,
+      'fecha': FieldValue.serverTimestamp(),
     });
   }
 
@@ -284,6 +370,13 @@ class FirestoreService {
       } else if (evento.tipo == TipoEvento.roja) {
         titulo = 'Tarjeta ROJA para ${evento.jugadorNombre}';
         cuerpo = 'El equipo se queda con uno menos.';
+      } else if (evento.tipo == TipoEvento.cambio) {
+        titulo = 'Cambio en el equipo';
+        cuerpo = 'Entra ${evento.jugadorNombre} por ${evento.jugadorSale}';
+      } else if (evento.tipo == TipoEvento.amarilla) {
+        // Opcional: Notificar amarillas si se desea
+        // titulo = 'Tarjeta Amarilla';
+        // cuerpo = 'Para ${evento.jugadorNombre}';
       }
       
       if (titulo.isNotEmpty) {

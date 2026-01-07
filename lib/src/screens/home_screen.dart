@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../widgets/noticias_feed.dart';
 import '../widgets/web_container.dart';
+import '../widgets/publicidad_banner.dart'; // Importamos el banner
 import 'fixture_screen.dart';
 import 'registro_screen.dart';
+import 'tabla_posiciones_screen.dart';
 import 'admin/admin_noticias_screen.dart';
 import 'admin/admin_fixture_screen.dart';
-import 'admin/admin_equipos_screen.dart'; // Importamos admin equipos
+import 'admin/admin_equipos_screen.dart';
+import 'admin/admin_publicidad_screen.dart'; // Importamos admin publicidad
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -57,11 +60,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<Widget> screens = [
       NoticiasFeed(equipoId: equipoId, nombreEquipo: nombreEquipo),
       const FixtureList(),
+      const TablaPosicionesScreen(),
     ];
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_selectedIndex == 0 ? 'Liga Roca' : 'Fixture'),
+        title: Text(_selectedIndex == 0 ? 'Liga Roca' : (_selectedIndex == 1 ? 'Fixture' : 'Posiciones')),
         actions: [
           // Menú Admin
           if (rol == 'admin')
@@ -75,6 +79,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminFixtureScreen()));
                 } else if (value == 'equipos') {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminEquiposScreen()));
+                } else if (value == 'publicidad') {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminPublicidadScreen()));
                 }
               },
               itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
@@ -89,6 +95,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 const PopupMenuItem<String>(
                   value: 'equipos',
                   child: Row(children: [Icon(Icons.shield, color: Colors.black54), SizedBox(width: 8), Text('Gestionar Equipos')]),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'publicidad',
+                  child: Row(children: [Icon(Icons.campaign, color: Colors.black54), SizedBox(width: 8), Text('Gestionar Publicidad')]),
                 ),
               ],
             ),
@@ -106,7 +116,12 @@ class _HomeScreenState extends State<HomeScreen> {
           )
         ],
       ),
-      body: WebContainer(child: screens[_selectedIndex]),
+      body: Column(
+        children: [
+          Expanded(child: WebContainer(child: screens[_selectedIndex])),
+          const PublicidadBanner(), // Banner fijo abajo
+        ],
+      ),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
@@ -116,6 +131,10 @@ class _HomeScreenState extends State<HomeScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.sports_soccer),
             label: 'Fixture',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.format_list_numbered),
+            label: 'Posiciones',
           ),
         ],
         currentIndex: _selectedIndex,
