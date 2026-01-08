@@ -13,15 +13,41 @@ enum TipoEvento {
   cambio,
 }
 
+class JugadorFormacion {
+  final String nombre;
+  final int camiseta;
+  final bool esTitular;
+
+  JugadorFormacion({
+    required this.nombre,
+    required this.camiseta,
+    this.esTitular = true,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'nombre': nombre,
+      'camiseta': camiseta,
+      'esTitular': esTitular,
+    };
+  }
+
+  factory JugadorFormacion.fromMap(Map<String, dynamic> map) {
+    return JugadorFormacion(
+      nombre: map['nombre'] ?? '',
+      camiseta: map['camiseta'] ?? 0,
+      esTitular: map['esTitular'] ?? true,
+    );
+  }
+}
+
 class EventoPartido {
   final String id;
   final TipoEvento tipo;
   final int minuto;
-  final String jugadorNombre; // Jugador principal (o el que entra en un cambio)
+  final String jugadorNombre;
   final int camiseta;
   final String equipoId;
-  
-  // Campos extra para cambios
   final String? jugadorSale;
   final int? camisetaSale;
 
@@ -47,6 +73,10 @@ class Partido {
   final EstadoPartido estado;
   final DateTime? tiempoInicio;
   final List<EventoPartido> eventos;
+  
+  // Nuevos campos para formaciones
+  final List<JugadorFormacion> formacionLocal;
+  final List<JugadorFormacion> formacionVisitante;
 
   Partido({
     required this.id,
@@ -58,6 +88,8 @@ class Partido {
     this.estado = EstadoPartido.pendiente,
     this.tiempoInicio,
     this.eventos = const [],
+    this.formacionLocal = const [],
+    this.formacionVisitante = const [],
   });
   
   bool get finalizado => estado == EstadoPartido.finalizado;

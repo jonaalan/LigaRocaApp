@@ -2,37 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/noticia.dart';
 import '../models/equipo.dart';
 import '../models/partido.dart';
-import '../models/publicidad.dart';
+import '../models/publicidad.dart'; // Importamos el modelo
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-
-  // --- PUBLICIDAD ---
-  Stream<List<Publicidad>> getPublicidades() {
-    return _db.collection('publicidades').where('activa', isEqualTo: true).snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        return Publicidad(
-          id: doc.id,
-          imageUrl: data['imageUrl'] ?? '',
-          linkUrl: data['linkUrl'],
-          activa: data['activa'] ?? true,
-        );
-      }).toList();
-    });
-  }
-
-  Future<void> crearPublicidad(String imageUrl, String? linkUrl) async {
-    await _db.collection('publicidades').add({
-      'imageUrl': imageUrl,
-      'linkUrl': linkUrl,
-      'activa': true,
-    });
-  }
-
-  Future<void> borrarPublicidad(String id) async {
-    await _db.collection('publicidades').doc(id).delete();
-  }
 
   // --- EQUIPOS ---
   Stream<List<Equipo>> getEquipos() {
@@ -55,31 +28,49 @@ class FirestoreService {
     });
   }
 
-  // Actualizar Equipo y propagar cambios a los partidos
   Future<void> actualizarEquipo(String id, String nombre, String escudoUrl) async {
-    // 1. Actualizar el equipo maestro
     await _db.collection('equipos').doc(id).update({
       'nombre': nombre,
       'escudoUrl': escudoUrl,
     });
-
-    // 2. Actualizar partidos donde es LOCAL
+    
     final partidosLocal = await _db.collection('partidos').where('localId', isEqualTo: id).get();
     for (var doc in partidosLocal.docs) {
-      await doc.reference.update({
-        'localNombre': nombre,
-        'localEscudo': escudoUrl,
-      });
+      await doc.reference.update({'localNombre': nombre, 'localEscudo': escudoUrl});
     }
-
-    // 3. Actualizar partidos donde es VISITANTE
     final partidosVisitante = await _db.collection('partidos').where('visitanteId', isEqualTo: id).get();
     for (var doc in partidosVisitante.docs) {
-      await doc.reference.update({
-        'visitanteNombre': nombre,
-        'visitanteEscudo': escudoUrl,
-      });
+      await doc.reference.update({'visitanteNombre': nombre, 'visitanteEscudo': escudoUrl});
     }
+  }
+
+  // --- PUBLICIDAD ---
+  // CORREGIDO: Ahora devuelve Stream<List<Publicidad>> mapeado
+  Stream<List<Publicidad>> getPublicidades() {
+    return _db.collection('publicidades').snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return Publicidad(
+          id: doc.id,
+          imageUrl: data['imageUrl'] ?? '',
+          linkUrl: data['linkUrl'],
+          activa: data['activa'] ?? true,
+        );
+      }).toList();
+    });
+  }
+
+  // CORREGIDO: Acepta String? para linkUrl
+  Future<void> crearPublicidad(String imageUrl, String? linkUrl) async {
+    await _db.collection('publicidades').add({
+      'imageUrl': imageUrl,
+      'linkUrl': linkUrl,
+      'activa': true,
+    });
+  }
+
+  Future<void> borrarPublicidad(String id) async {
+    await _db.collection('publicidades').doc(id).delete();
   }
 
   // --- NOTICIAS ---
@@ -185,6 +176,16 @@ class FirestoreService {
           }).toList();
         }
 
+        List<JugadorFormacion> formacionLocal = [];
+        if (data['formacionLocal'] != null) {
+          formacionLocal = List.from(data['formacionLocal']).map((e) => JugadorFormacion.fromMap(e as Map<String, dynamic>)).toList();
+        }
+
+        List<JugadorFormacion> formacionVisitante = [];
+        if (data['formacionVisitante'] != null) {
+          formacionVisitante = List.from(data['formacionVisitante']).map((e) => JugadorFormacion.fromMap(e as Map<String, dynamic>)).toList();
+        }
+
         EstadoPartido estado = EstadoPartido.pendiente;
         if (data['estado'] != null) {
           estado = EstadoPartido.values.firstWhere((e) => e.toString() == data['estado'], orElse: () => EstadoPartido.pendiente);
@@ -210,6 +211,8 @@ class FirestoreService {
           estado: estado,
           tiempoInicio: data['tiempoInicio'] != null ? (data['tiempoInicio'] as Timestamp).toDate() : null,
           eventos: eventos,
+          formacionLocal: formacionLocal,
+          formacionVisitante: formacionVisitante,
         );
       }).toList();
     });
@@ -232,6 +235,8 @@ class FirestoreService {
       'golesLocal': 0,
       'golesVisitante': 0,
       'eventos': [],
+      'formacionLocal': [],
+      'formacionVisitante': [],
     });
   }
 
@@ -258,66 +263,15 @@ class FirestoreService {
   }
 
   Future<void> iniciarPartido(String id) async {
-    final docRef = _db.collection('partidos').doc(id);
-    final doc = await docRef.get();
-    if (!doc.exists) return;
-    
-    final data = doc.data()!;
-    final localId = data['localId'];
-    final visitanteId = data['visitanteId'];
-    final localNombre = data['localNombre'];
-    final visitanteNombre = data['visitanteNombre'];
-
-    await docRef.update({
+    await _db.collection('partidos').doc(id).update({
       'estado': EstadoPartido.jugando.toString(),
       'tiempoInicio': FieldValue.serverTimestamp(),
-    });
-
-    // Notificar inicio
-    _db.collection('notificaciones_pendientes').add({
-      'topic': 'equipo_$localId',
-      'titulo': '¡Comenzó el partido!',
-      'cuerpo': 'Ya juegan $localNombre vs $visitanteNombre',
-      'fecha': FieldValue.serverTimestamp(),
-    });
-    _db.collection('notificaciones_pendientes').add({
-      'topic': 'equipo_$visitanteId',
-      'titulo': '¡Comenzó el partido!',
-      'cuerpo': 'Ya juegan $localNombre vs $visitanteNombre',
-      'fecha': FieldValue.serverTimestamp(),
     });
   }
 
   Future<void> finalizarPartido(String id) async {
-    final docRef = _db.collection('partidos').doc(id);
-    final doc = await docRef.get();
-    if (!doc.exists) return;
-    
-    final data = doc.data()!;
-    final localId = data['localId'];
-    final visitanteId = data['visitanteId'];
-    final localNombre = data['localNombre'];
-    final visitanteNombre = data['visitanteNombre'];
-    final golesLocal = data['golesLocal'];
-    final golesVisitante = data['golesVisitante'];
-
-    await docRef.update({
+    await _db.collection('partidos').doc(id).update({
       'estado': EstadoPartido.finalizado.toString(),
-    });
-
-    // Notificar final
-    String resultado = '$localNombre $golesLocal - $golesVisitante $visitanteNombre';
-    _db.collection('notificaciones_pendientes').add({
-      'topic': 'equipo_$localId',
-      'titulo': 'Final del partido',
-      'cuerpo': resultado,
-      'fecha': FieldValue.serverTimestamp(),
-    });
-    _db.collection('notificaciones_pendientes').add({
-      'topic': 'equipo_$visitanteId',
-      'titulo': 'Final del partido',
-      'cuerpo': resultado,
-      'fecha': FieldValue.serverTimestamp(),
     });
   }
 
@@ -360,7 +314,6 @@ class FirestoreService {
 
       transaction.update(docRef, updates);
       
-      // --- NOTIFICACIÓN ---
       String titulo = '';
       String cuerpo = '';
       
@@ -370,13 +323,6 @@ class FirestoreService {
       } else if (evento.tipo == TipoEvento.roja) {
         titulo = 'Tarjeta ROJA para ${evento.jugadorNombre}';
         cuerpo = 'El equipo se queda con uno menos.';
-      } else if (evento.tipo == TipoEvento.cambio) {
-        titulo = 'Cambio en el equipo';
-        cuerpo = 'Entra ${evento.jugadorNombre} por ${evento.jugadorSale}';
-      } else if (evento.tipo == TipoEvento.amarilla) {
-        // Opcional: Notificar amarillas si se desea
-        // titulo = 'Tarjeta Amarilla';
-        // cuerpo = 'Para ${evento.jugadorNombre}';
       }
       
       if (titulo.isNotEmpty) {
@@ -387,6 +333,15 @@ class FirestoreService {
           'fecha': FieldValue.serverTimestamp(),
         });
       }
+    });
+  }
+
+  Future<void> guardarFormacion(String partidoId, bool esLocal, List<JugadorFormacion> jugadores) async {
+    final campo = esLocal ? 'formacionLocal' : 'formacionVisitante';
+    final listaMapas = jugadores.map((j) => j.toMap()).toList();
+    
+    await _db.collection('partidos').doc(partidoId).update({
+      campo: listaMapas,
     });
   }
 }

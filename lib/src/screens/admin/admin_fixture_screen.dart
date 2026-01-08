@@ -4,6 +4,7 @@ import '../../models/partido.dart';
 import '../../models/equipo.dart';
 import '../../services/firestore_service.dart';
 import 'admin_partido_control_screen.dart';
+import 'admin_formacion_screen.dart';
 
 class AdminFixtureScreen extends StatelessWidget {
   const AdminFixtureScreen({super.key});
@@ -41,7 +42,6 @@ class AdminFixtureScreen extends StatelessWidget {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Botón para Controlar el Partido en Vivo
                       IconButton(
                         icon: const Icon(Icons.sports_esports, color: Colors.green),
                         tooltip: 'Controlar Partido',
@@ -54,13 +54,25 @@ class AdminFixtureScreen extends StatelessWidget {
                           );
                         },
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.blue),
-                        onPressed: () => _mostrarDialogoResultado(context, firestoreService, partido),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _confirmarBorrar(context, firestoreService, partido.id),
+                      // Menú de opciones extra (Formaciones)
+                      PopupMenuButton<String>(
+                        onSelected: (value) {
+                          if (value == 'formacion_local') {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => AdminFormacionScreen(partido: partido, esLocal: true)));
+                          } else if (value == 'formacion_visitante') {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => AdminFormacionScreen(partido: partido, esLocal: false)));
+                          } else if (value == 'editar') {
+                            _mostrarDialogoResultado(context, firestoreService, partido);
+                          } else if (value == 'borrar') {
+                            _confirmarBorrar(context, firestoreService, partido.id);
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(value: 'formacion_local', child: Text('Formación Local')),
+                          const PopupMenuItem(value: 'formacion_visitante', child: Text('Formación Visitante')),
+                          const PopupMenuItem(value: 'editar', child: Text('Editar Resultado')),
+                          const PopupMenuItem(value: 'borrar', child: Text('Eliminar Partido', style: TextStyle(color: Colors.red))),
+                        ],
                       ),
                     ],
                   ),
