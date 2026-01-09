@@ -8,83 +8,130 @@ class NoticiaCard extends StatelessWidget {
 
   const NoticiaCard({super.key, required this.noticia});
 
+  String _getFechaFormateada(DateTime fecha) {
+    return DateFormat('dd MMM', 'es').format(fecha).toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
-
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      clipBehavior: Clip.antiAlias, // Para que la imagen respete los bordes
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => NoticiaDetalleScreen(noticia: noticia)),
-          );
-        },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Imagen de cabecera (si existe)
-            if (noticia.imageUrl != null && noticia.imageUrl!.isNotEmpty)
-              SizedBox(
-                height: 150,
-                width: double.infinity,
-                child: Image.network(
-                  noticia.imageUrl!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(height: 0),
-                ),
-              ),
-
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Etiqueta de tipo de noticia
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: noticia.tipo == TipoNoticia.equipo 
-                          ? Colors.green.withOpacity(0.1) 
-                          : Colors.blue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      noticia.tipo == TipoNoticia.equipo ? 'TU EQUIPO' : 'GENERAL',
-                      style: TextStyle(
-                        color: noticia.tipo == TipoNoticia.equipo ? Colors.green : Colors.blue,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 10,
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => _abrirDetalle(context),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. IMAGEN (Ocupa todo el ancho)
+                if (noticia.imageUrl != null && noticia.imageUrl!.isNotEmpty)
+                  SizedBox(
+                    height: 200,
+                    width: double.infinity,
+                    child: Image.network(
+                      noticia.imageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        color: Colors.grey[200],
+                        child: const Icon(Icons.image_not_supported, color: Colors.grey),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    noticia.titulo,
-                    style: Theme.of(context).textTheme.titleLarge,
+
+                // 2. CONTENIDO
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Fecha pequeña y elegante
+                      Text(
+                        DateFormat('dd/MM/yyyy').format(noticia.fecha),
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      
+                      // Título Grande
+                      Text(
+                        noticia.titulo,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 18,
+                          height: 1.2,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      
+                      // Texto resumen
+                      Text(
+                        noticia.contenido,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[700],
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    noticia.contenido,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
+                ),
+
+                // 3. ACCIONES (Solo iconos a la derecha)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.favorite_border, size: 22),
+                        color: Colors.grey[600],
+                        onPressed: () {},
+                        constraints: const BoxConstraints(),
+                        padding: EdgeInsets.zero,
+                      ),
+                      const SizedBox(width: 20),
+                      IconButton(
+                        icon: const Icon(Icons.share_outlined, size: 22),
+                        color: Colors.grey[600],
+                        onPressed: () {},
+                        constraints: const BoxConstraints(),
+                        padding: EdgeInsets.zero,
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    dateFormat.format(noticia.fecha),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
+    );
+  }
+
+  void _abrirDetalle(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => NoticiaDetalleScreen(noticia: noticia)),
     );
   }
 }

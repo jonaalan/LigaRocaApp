@@ -50,133 +50,56 @@ class _PartidoDetalleScreenState extends State<PartidoDetalleScreen> {
     final eventosLocal = widget.partido.eventos.where((e) => e.equipoId == widget.partido.local.id).toList();
     final eventosVisitante = widget.partido.eventos.where((e) => e.equipoId == widget.partido.visitante.id).toList();
 
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Detalle del Partido'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'MINUTO A MINUTO'),
-              Tab(text: 'FORMACIONES'),
-            ],
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Detalle del Partido'),
+      ),
+      body: Column(
+        children: [
+          // Marcador (Siempre visible)
+          Container(
+            padding: const EdgeInsets.all(20),
+            color: Colors.green[800],
+            child: Column(
+              children: [
+                Text(
+                  _tiempoTranscurrido,
+                  style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _EquipoHeader(equipo: widget.partido.local, goles: widget.partido.golesLocal),
+                    const Text("-", style: TextStyle(color: Colors.white, fontSize: 40)),
+                    _EquipoHeader(equipo: widget.partido.visitante, goles: widget.partido.golesVisitante),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-        body: Column(
-          children: [
-            // Marcador (Siempre visible)
-            Container(
-              padding: const EdgeInsets.all(20),
-              color: Colors.green[800],
-              child: Column(
-                children: [
-                  Text(
-                    _tiempoTranscurrido,
-                    style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+          
+          // Minuto a Minuto
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: eventosLocal.length,
+                    itemBuilder: (context, index) => _EventoItem(evento: eventosLocal[index], esLocal: true),
                   ),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _EquipoHeader(equipo: widget.partido.local, goles: widget.partido.golesLocal),
-                      const Text("-", style: TextStyle(color: Colors.white, fontSize: 40)),
-                      _EquipoHeader(equipo: widget.partido.visitante, goles: widget.partido.golesVisitante),
-                    ],
+                ),
+                Container(width: 1, color: Colors.grey[300]),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: eventosVisitante.length,
+                    itemBuilder: (context, index) => _EventoItem(evento: eventosVisitante[index], esLocal: false),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            
-            // Contenido de Pestañas
-            Expanded(
-              child: TabBarView(
-                children: [
-                  // Pestaña 1: Minuto a Minuto
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: eventosLocal.length,
-                          itemBuilder: (context, index) => _EventoItem(evento: eventosLocal[index], esLocal: true),
-                        ),
-                      ),
-                      Container(width: 1, color: Colors.grey[300]),
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: eventosVisitante.length,
-                          itemBuilder: (context, index) => _EventoItem(evento: eventosVisitante[index], esLocal: false),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  // Pestaña 2: Formaciones
-                  Row(
-                    children: [
-                      // Formación Local
-                      Expanded(
-                        child: Column(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text(widget.partido.local.nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            ),
-                            Expanded(
-                              child: ListView.builder(
-                                itemCount: widget.partido.formacionLocal.length,
-                                itemBuilder: (context, index) {
-                                  final jugador = widget.partido.formacionLocal[index];
-                                  return ListTile(
-                                    dense: true,
-                                    leading: CircleAvatar(
-                                      radius: 12,
-                                      backgroundColor: jugador.esTitular ? Colors.blue : Colors.grey,
-                                      child: Text(jugador.camiseta.toString(), style: const TextStyle(fontSize: 10, color: Colors.white)),
-                                    ),
-                                    title: Text(jugador.nombre, style: const TextStyle(fontSize: 12)),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const VerticalDivider(),
-                      // Formación Visitante
-                      Expanded(
-                        child: Column(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text(widget.partido.visitante.nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            ),
-                            Expanded(
-                              child: ListView.builder(
-                                itemCount: widget.partido.formacionVisitante.length,
-                                itemBuilder: (context, index) {
-                                  final jugador = widget.partido.formacionVisitante[index];
-                                  return ListTile(
-                                    dense: true,
-                                    leading: CircleAvatar(
-                                      radius: 12,
-                                      backgroundColor: jugador.esTitular ? Colors.red : Colors.grey,
-                                      child: Text(jugador.camiseta.toString(), style: const TextStyle(fontSize: 10, color: Colors.white)),
-                                    ),
-                                    title: Text(jugador.nombre, style: const TextStyle(fontSize: 12)),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

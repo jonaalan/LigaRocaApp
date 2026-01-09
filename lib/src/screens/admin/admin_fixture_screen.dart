@@ -4,7 +4,6 @@ import '../../models/partido.dart';
 import '../../models/equipo.dart';
 import '../../services/firestore_service.dart';
 import 'admin_partido_control_screen.dart';
-import 'admin_formacion_screen.dart';
 
 class AdminFixtureScreen extends StatelessWidget {
   const AdminFixtureScreen({super.key});
@@ -54,22 +53,16 @@ class AdminFixtureScreen extends StatelessWidget {
                           );
                         },
                       ),
-                      // Menú de opciones extra (Formaciones)
+                      // Menú de opciones extra
                       PopupMenuButton<String>(
                         onSelected: (value) {
-                          if (value == 'formacion_local') {
-                            Navigator.push(context, MaterialPageRoute(builder: (_) => AdminFormacionScreen(partido: partido, esLocal: true)));
-                          } else if (value == 'formacion_visitante') {
-                            Navigator.push(context, MaterialPageRoute(builder: (_) => AdminFormacionScreen(partido: partido, esLocal: false)));
-                          } else if (value == 'editar') {
+                          if (value == 'editar') {
                             _mostrarDialogoResultado(context, firestoreService, partido);
                           } else if (value == 'borrar') {
                             _confirmarBorrar(context, firestoreService, partido.id);
                           }
                         },
                         itemBuilder: (context) => [
-                          const PopupMenuItem(value: 'formacion_local', child: Text('Formación Local')),
-                          const PopupMenuItem(value: 'formacion_visitante', child: Text('Formación Visitante')),
                           const PopupMenuItem(value: 'editar', child: Text('Editar Resultado')),
                           const PopupMenuItem(value: 'borrar', child: Text('Eliminar Partido', style: TextStyle(color: Colors.red))),
                         ],

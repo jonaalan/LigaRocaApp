@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/noticia.dart';
+import '../models/usuario.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import 'admin/editar_noticia_screen.dart';
@@ -26,8 +27,8 @@ class _NoticiaDetalleScreenState extends State<NoticiaDetalleScreen> {
   }
 
   Future<void> _checkAdmin() async {
-    final userData = await _authService.getUserData();
-    if (mounted && userData != null && userData['rol'] == 'admin') {
+    final usuario = await _authService.getUsuarioActual();
+    if (mounted && usuario != null && usuario.rol == RolUsuario.admin) {
       setState(() {
         _isAdmin = true;
       });
@@ -62,10 +63,9 @@ class _NoticiaDetalleScreenState extends State<NoticiaDetalleScreen> {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 300.0, // Aumenté un poco la altura
+            expandedHeight: 300.0,
             floating: false,
             pinned: true,
-            // Iconos con sombra para que se vean sobre cualquier imagen
             leading: Container(
               margin: const EdgeInsets.all(8),
               decoration: const BoxDecoration(
@@ -118,7 +118,6 @@ class _NoticiaDetalleScreenState extends State<NoticiaDetalleScreen> {
                           color: Colors.green[800],
                           child: const Center(child: Icon(Icons.newspaper, size: 80, color: Colors.white54)),
                         ),
-                  // Gradiente para mejorar lectura si hubiera texto sobre la imagen
                   const DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -135,11 +134,10 @@ class _NoticiaDetalleScreenState extends State<NoticiaDetalleScreen> {
           ),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0), // Más margen
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Etiqueta
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
@@ -152,19 +150,15 @@ class _NoticiaDetalleScreenState extends State<NoticiaDetalleScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  
-                  // Título
                   Text(
                     widget.noticia.titulo,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w800, // Más negrita
+                      fontWeight: FontWeight.w800,
                       color: isDark ? Colors.white : Colors.black87,
                       height: 1.2,
                     ),
                   ),
                   const SizedBox(height: 12),
-                  
-                  // Fecha
                   Row(
                     children: [
                       Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
@@ -178,18 +172,15 @@ class _NoticiaDetalleScreenState extends State<NoticiaDetalleScreen> {
                   const SizedBox(height: 32),
                   const Divider(),
                   const SizedBox(height: 32),
-                  
-                  // Contenido
                   Text(
                     widget.noticia.contenido,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      height: 1.8, // Mayor interlineado para lectura cómoda
-                      fontSize: 18, // Letra un poco más grande
+                      height: 1.8,
+                      fontSize: 18,
                       color: isDark ? Colors.white70 : Colors.black87,
                     ),
                   ),
-                  
-                  const SizedBox(height: 50), // Espacio final
+                  const SizedBox(height: 50),
                 ],
               ),
             ),

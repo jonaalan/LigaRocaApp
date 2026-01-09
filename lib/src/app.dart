@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:liga_roca/src/config/environment.dart';
 import 'package:liga_roca/src/screens/login_screen.dart';
 import 'package:liga_roca/src/services/auth_service.dart';
 import 'package:liga_roca/src/screens/home_screen.dart';
+import 'package:provider/provider.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -9,13 +11,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AuthService authService = AuthService();
+    final env = Provider.of<AppEnvironment>(context);
 
     return MaterialApp(
-      title: 'Liga Roca',
+      title: env.appName,
+      debugShowCheckedModeBanner: false, // Quitamos el banner por defecto de Flutter
       theme: ThemeData(
         primarySwatch: Colors.green,
         useMaterial3: true,
-        // Optimizaciones de rendimiento visual
         pageTransitionsTheme: const PageTransitionsTheme(
           builders: {
             TargetPlatform.android: ZoomPageTransitionsBuilder(),
@@ -27,9 +30,20 @@ class MyApp extends StatelessWidget {
           foregroundColor: Colors.white,
         ),
       ),
-      // Usamos un FutureBuilder para evitar bloqueos en el hilo principal al verificar el usuario
+      builder: (context, child) {
+        // Si estamos en DEV, agregamos un banner visual
+        if (env.isDev) {
+          return Banner(
+            message: env.bannerMessage ?? 'DEV',
+            location: BannerLocation.topStart,
+            color: Colors.red,
+            child: child!,
+          );
+        }
+        return child!;
+      },
       home: FutureBuilder(
-        future: Future.value(authService.currentUser), // Verificación rápida
+        future: Future.value(authService.currentUser),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(body: Center(child: CircularProgressIndicator()));

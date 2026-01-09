@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/noticia.dart';
 import '../models/equipo.dart';
 import '../models/partido.dart';
-import '../models/publicidad.dart'; // Importamos el modelo
+import '../models/publicidad.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -45,7 +45,6 @@ class FirestoreService {
   }
 
   // --- PUBLICIDAD ---
-  // CORREGIDO: Ahora devuelve Stream<List<Publicidad>> mapeado
   Stream<List<Publicidad>> getPublicidades() {
     return _db.collection('publicidades').snapshots().map((snapshot) {
       return snapshot.docs.map((doc) {
@@ -60,7 +59,6 @@ class FirestoreService {
     });
   }
 
-  // CORREGIDO: Acepta String? para linkUrl
   Future<void> crearPublicidad(String imageUrl, String? linkUrl) async {
     await _db.collection('publicidades').add({
       'imageUrl': imageUrl,
@@ -176,16 +174,6 @@ class FirestoreService {
           }).toList();
         }
 
-        List<JugadorFormacion> formacionLocal = [];
-        if (data['formacionLocal'] != null) {
-          formacionLocal = List.from(data['formacionLocal']).map((e) => JugadorFormacion.fromMap(e as Map<String, dynamic>)).toList();
-        }
-
-        List<JugadorFormacion> formacionVisitante = [];
-        if (data['formacionVisitante'] != null) {
-          formacionVisitante = List.from(data['formacionVisitante']).map((e) => JugadorFormacion.fromMap(e as Map<String, dynamic>)).toList();
-        }
-
         EstadoPartido estado = EstadoPartido.pendiente;
         if (data['estado'] != null) {
           estado = EstadoPartido.values.firstWhere((e) => e.toString() == data['estado'], orElse: () => EstadoPartido.pendiente);
@@ -211,8 +199,6 @@ class FirestoreService {
           estado: estado,
           tiempoInicio: data['tiempoInicio'] != null ? (data['tiempoInicio'] as Timestamp).toDate() : null,
           eventos: eventos,
-          formacionLocal: formacionLocal,
-          formacionVisitante: formacionVisitante,
         );
       }).toList();
     });
@@ -235,8 +221,6 @@ class FirestoreService {
       'golesLocal': 0,
       'golesVisitante': 0,
       'eventos': [],
-      'formacionLocal': [],
-      'formacionVisitante': [],
     });
   }
 
@@ -333,15 +317,6 @@ class FirestoreService {
           'fecha': FieldValue.serverTimestamp(),
         });
       }
-    });
-  }
-
-  Future<void> guardarFormacion(String partidoId, bool esLocal, List<JugadorFormacion> jugadores) async {
-    final campo = esLocal ? 'formacionLocal' : 'formacionVisitante';
-    final listaMapas = jugadores.map((j) => j.toMap()).toList();
-    
-    await _db.collection('partidos').doc(partidoId).update({
-      campo: listaMapas,
     });
   }
 }

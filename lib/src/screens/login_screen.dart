@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
+import '../widgets/auth_background.dart';
 import 'home_screen.dart';
 import 'registro_screen.dart';
 
@@ -70,81 +71,108 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Iniciar Sesión')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
+    return AuthBackground(
+      child: Form(
+        key: _formKey,
+        child: Column(
+          children: [
+            const Text(
+              'INICIAR SESIÓN',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+                letterSpacing: 1.2,
+              ),
+            ),
+            const SizedBox(height: 24),
+            TextFormField(
+              controller: _emailController,
+              decoration: InputDecoration(
+                labelText: 'Correo Electrónico',
+                prefixIcon: const Icon(Icons.email_outlined),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: Colors.grey[50],
+              ),
+              keyboardType: TextInputType.emailAddress,
+              validator: (v) => v!.isEmpty ? 'Ingrese su email' : null,
+            ),
+            const SizedBox(height: 20),
+            TextFormField(
+              controller: _passwordController,
+              decoration: InputDecoration(
+                labelText: 'Contraseña',
+                prefixIcon: const Icon(Icons.lock_outline),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: Colors.grey[50],
+              ),
+              obscureText: true,
+              validator: (v) => v!.isEmpty ? 'Ingrese su contraseña' : null,
+            ),
+            const SizedBox(height: 30),
+            
+            SizedBox(
+              width: double.infinity,
+              height: 55,
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : ElevatedButton(
+                      onPressed: _login,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green[800],
+                        foregroundColor: Colors.white,
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'INGRESAR',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ),
+            ),
+            
+            const SizedBox(height: 20),
+            
+            Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo de la App
-                SizedBox(
-                  height: 150,
-                  child: Image.asset('assets/icon/Chitologo1024.png'),
-                ),
-                const SizedBox(height: 24),
-                
-                TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'Correo Electrónico',
-                    prefixIcon: Icon(Icons.email),
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (v) => v!.isEmpty ? 'Ingrese su email' : null,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: const InputDecoration(
-                    labelText: 'Contraseña',
-                    prefixIcon: Icon(Icons.lock),
-                    border: OutlineInputBorder(),
-                  ),
-                  obscureText: true,
-                  validator: (v) => v!.isEmpty ? 'Ingrese su contraseña' : null,
-                ),
-                const SizedBox(height: 24),
-                
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: _isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : ElevatedButton(
-                          onPressed: _login,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green[800],
-                            foregroundColor: Colors.white,
-                          ),
-                          child: const Text('INGRESAR', style: TextStyle(fontSize: 16)),
-                        ),
-                ),
-                
-                const SizedBox(height: 16),
+                const Text('¿No tienes cuenta?'),
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).pushReplacement(
                       MaterialPageRoute(builder: (context) => const RegistroScreen()),
                     );
                   },
-                  child: const Text('¿No tienes cuenta? Regístrate'),
-                ),
-
-                const SizedBox(height: 40),
-                const Divider(),
-                TextButton.icon(
-                  onPressed: _contactarSoporte,
-                  icon: const Icon(Icons.help_outline, color: Colors.grey),
-                  label: const Text('¿Necesitas ayuda? Contáctanos', style: TextStyle(color: Colors.grey)),
+                  child: const Text(
+                    'Regístrate',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
             ),
-          ),
+
+            const SizedBox(height: 10),
+            TextButton.icon(
+              onPressed: _contactarSoporte,
+              icon: const Icon(Icons.help_outline, size: 18, color: Colors.grey),
+              label: const Text(
+                'Ayuda',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+          ],
         ),
       ),
     );

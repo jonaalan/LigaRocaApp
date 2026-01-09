@@ -17,36 +17,58 @@ class NoticiasFeed extends StatelessWidget {
   Widget build(BuildContext context) {
     final firestoreService = FirestoreService();
 
-    return CustomScrollView(
-      slivers: [
-        // Sección 1: Noticias de tu Equipo (Prioritarias)
-        if (equipoId != null) ...[
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-              child: Text(
-                'Novedades de $nombreEquipo',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green[800],
-                ),
-              ),
-            ),
-          ),
-          StreamBuilder<List<Noticia>>(
-            stream: firestoreService.getNoticiasEquipo(equipoId!),
-            builder: (context, snapshot) {
-              if (snapshot.hasError) return SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.all(16), child: Text('Error cargando noticias de equipo: ${snapshot.error}')));
-              if (!snapshot.hasData) return const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator()));
+    return RefreshIndicator(
+      onRefresh: () async {
+        // Como usamos Streams, el refresh es visual, pero útil para forzar repintado si fuera necesario
+        await Future.delayed(const Duration(seconds: 1));
+      },
+      child: CustomScrollView(
+        slivers: [
+          const SliverToBoxAdapter(child: SizedBox(height: 8)), // Pequeño margen superior
 
-              final noticias = snapshot.data!;
-              if (noticias.isEmpty) {
-                return const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text('No hay noticias recientes de tu equipo.'),
+          // Sección 1: Noticias de tu Equipo (Sin título, solo las tarjetas)
+          if (equipoId != null)
+            StreamBuilder<List<Noticia>>(
+              stream: firestoreService.getNoticiasEquipo(equipoId!),
+              builder: (context, snapshot) {
+                // Si hay error o carga, no mostramos nada para no ensuciar la UI, o un loader discreto
+                if (snapshot.hasError || !snapshot.hasData) return const SliverToBoxAdapter(child: SizedBox.shrink());
+
+                final noticias = snapshot.data!;
+                if (noticias.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+
+                return SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => NoticiaCard(noticia: noticias[index]),
+                    childCount: noticias.length,
                   ),
                 );
+              },
+            ),
+
+          // Sección 2: Noticias Generales (A continuación, sin separación brusca)
+          StreamBuilder<List<Noticia>>(
+            stream: firestoreService.getNoticiasGenerales(),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) return const SliverToBoxAdapter(child: SizedBox.shrink());
+              if (!snapshot.hasData) {
+                return const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.all(32.0),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                );
+              }
+
+              final noticias = snapshot.data!;
+
+              if (noticias.isEmpty) {
+                 return const SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.all(32.0),
+                      child: Center(child: Text('No hay noticias para mostrar', style: TextStyle(color: Colors.grey))),
+                    ),
+                  );
               }
 
               return SliverList(
@@ -57,48 +79,10 @@ class NoticiasFeed extends StatelessWidget {
               );
             },
           ),
+
+          const SliverToBoxAdapter(child: SizedBox(height: 80)), // Espacio final para que el FAB no tape nada
         ],
-
-        // Sección 2: Noticias Generales
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-            child: Text(
-              'Noticias de la Liga',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
-        StreamBuilder<List<Noticia>>(
-          stream: firestoreService.getNoticiasGenerales(),
-          builder: (context, snapshot) {
-            if (snapshot.hasError) return SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.all(16), child: Text('Error cargando noticias generales: ${snapshot.error}')));
-            if (!snapshot.hasData) return const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator()));
-
-            final noticias = snapshot.data!;
-
-            if (noticias.isEmpty) {
-               return const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text('No hay noticias generales cargadas aún.'),
-                  ),
-                );
-            }
-
-            return SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) => NoticiaCard(noticia: noticias[index]),
-                childCount: noticias.length,
-              ),
-            );
-          },
-        ),
-
-        const SliverToBoxAdapter(child: SizedBox(height: 40)),
-      ],
+      ),
     );
   }
 }
