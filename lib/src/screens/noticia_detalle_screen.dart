@@ -57,135 +57,152 @@ class _NoticiaDetalleScreenState extends State<NoticiaDetalleScreen> {
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Forzamos colores claros para el texto porque el fondo será oscuro
+    const colorTexto = Color(0xFFFDFDF5);
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 300.0,
-            floating: false,
-            pinned: true,
-            leading: Container(
-              margin: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: Colors.black26,
-                shape: BoxShape.circle,
+      // Fondo degradado Dark Premium
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF052e16), // Verde muy oscuro
+              Color(0xFF0f172a), // Azul grisáceo oscuro
+              Color(0xFF000000), // Negro
+            ],
+            stops: [0.0, 0.6, 1.0],
+          ),
+        ),
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              expandedHeight: 300.0,
+              floating: false,
+              pinned: true,
+              backgroundColor: Colors.transparent, // Transparente para ver el degradado al contraerse
+              leading: Container(
+                margin: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(
+                  color: Colors.black45, // Un poco más oscuro para contraste
+                  shape: BoxShape.circle,
+                ),
+                child: const BackButton(color: Colors.white),
               ),
-              child: const BackButton(color: Colors.white),
-            ),
-            actions: _isAdmin
-                ? [
-                    Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      decoration: const BoxDecoration(color: Colors.black26, shape: BoxShape.circle),
-                      child: IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.white),
-                        tooltip: 'Editar',
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => EditarNoticiaScreen(noticia: widget.noticia),
-                            ),
-                          ).then((_) => setState(() {}));
-                        },
-                      ),
-                    ),
-                    Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      decoration: const BoxDecoration(color: Colors.black26, shape: BoxShape.circle),
-                      child: IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.white),
-                        tooltip: 'Eliminar',
-                        onPressed: _borrarNoticia,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                  ]
-                : null,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  widget.noticia.imageUrl != null && widget.noticia.imageUrl!.isNotEmpty
-                      ? Image.network(
-                          widget.noticia.imageUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey[300]),
-                        )
-                      : Container(
-                          color: Colors.green[800],
-                          child: const Center(child: Icon(Icons.newspaper, size: 80, color: Colors.white54)),
+              actions: _isAdmin
+                  ? [
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        decoration: const BoxDecoration(color: Colors.black45, shape: BoxShape.circle),
+                        child: IconButton(
+                          icon: const Icon(Icons.edit, color: Colors.white),
+                          tooltip: 'Editar',
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => EditarNoticiaScreen(noticia: widget.noticia),
+                              ),
+                            ).then((_) => setState(() {}));
+                          },
                         ),
-                  const DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Colors.black45, Colors.transparent],
-                        stops: [0.0, 0.3],
+                      ),
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        decoration: const BoxDecoration(color: Colors.black45, shape: BoxShape.circle),
+                        child: IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.white),
+                          tooltip: 'Eliminar',
+                          onPressed: _borrarNoticia,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ]
+                  : null,
+              flexibleSpace: FlexibleSpaceBar(
+                background: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    widget.noticia.imageUrl != null && widget.noticia.imageUrl!.isNotEmpty
+                        ? Image.network(
+                            widget.noticia.imageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey[900]),
+                          )
+                        : Container(
+                            color: Colors.green[900],
+                            child: const Center(child: Icon(Icons.newspaper, size: 80, color: Colors.white24)),
+                          ),
+                    const DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Colors.black54, Colors.transparent],
+                          stops: [0.0, 0.4],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: widget.noticia.tipo == TipoNoticia.equipo ? Colors.green : Colors.blue,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      widget.noticia.tipo == TipoNoticia.equipo ? 'TU EQUIPO' : 'GENERAL',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    widget.noticia.titulo,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: isDark ? Colors.white : Colors.black87,
-                      height: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
-                      const SizedBox(width: 4),
-                      Text(
-                        dateFormat.format(widget.noticia.fecha),
-                        style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: widget.noticia.tipo == TipoNoticia.equipo ? Colors.green[700] : Colors.blue[700],
+                        borderRadius: BorderRadius.circular(20),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 32),
-                  const Divider(),
-                  const SizedBox(height: 32),
-                  Text(
-                    widget.noticia.contenido,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      height: 1.8,
-                      fontSize: 18,
-                      color: isDark ? Colors.white70 : Colors.black87,
+                      child: Text(
+                        widget.noticia.tipo == TipoNoticia.equipo ? 'TU EQUIPO' : 'GENERAL',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 50),
-                ],
+                    const SizedBox(height: 20),
+                    Text(
+                      widget.noticia.titulo,
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: colorTexto,
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Icon(Icons.access_time, size: 16, color: Colors.grey[400]),
+                        const SizedBox(width: 4),
+                        Text(
+                          dateFormat.format(widget.noticia.fecha),
+                          style: TextStyle(color: Colors.grey[400], fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 32),
+                    const Divider(color: Colors.white24),
+                    const SizedBox(height: 32),
+                    Text(
+                      widget.noticia.contenido,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        height: 1.8,
+                        fontSize: 18,
+                        color: Colors.white70, // Texto un poco más suave para lectura
+                      ),
+                    ),
+                    const SizedBox(height: 50),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -14,14 +14,16 @@ class NoticiaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.cardTheme.color, // Usa el color del tema (Gris oscuro)
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withOpacity(0.2), // Sombra más oscura
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -36,7 +38,7 @@ class NoticiaCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 1. IMAGEN (Ocupa todo el ancho)
+                // 1. IMAGEN
                 if (noticia.imageUrl != null && noticia.imageUrl!.isNotEmpty)
                   SizedBox(
                     height: 200,
@@ -45,8 +47,8 @@ class NoticiaCard extends StatelessWidget {
                       noticia.imageUrl!,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) => Container(
-                        color: Colors.grey[200],
-                        child: const Icon(Icons.image_not_supported, color: Colors.grey),
+                        color: Colors.white10,
+                        child: const Icon(Icons.image_not_supported, color: Colors.white24),
                       ),
                     ),
                   ),
@@ -57,11 +59,11 @@ class NoticiaCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Fecha pequeña y elegante
+                      // Fecha
                       Text(
                         DateFormat('dd/MM/yyyy').format(noticia.fecha),
                         style: TextStyle(
-                          color: Colors.grey[500],
+                          color: theme.colorScheme.primary, // Verde neón
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0.5,
@@ -69,26 +71,23 @@ class NoticiaCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       
-                      // Título Grande
+                      // Título
                       Text(
                         noticia.titulo,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w800,
+                        style: theme.textTheme.titleLarge?.copyWith(
                           fontSize: 18,
                           height: 1.2,
-                          color: Colors.black87,
                         ),
                       ),
                       const SizedBox(height: 8),
                       
-                      // Texto resumen
+                      // Texto
                       Text(
                         noticia.contenido,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[700],
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: Colors.white70,
                           height: 1.5,
                         ),
                       ),
@@ -96,7 +95,7 @@ class NoticiaCard extends StatelessWidget {
                   ),
                 ),
 
-                // 3. ACCIONES (Solo iconos a la derecha)
+                // 3. ACCIONES
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   child: Row(
@@ -104,7 +103,7 @@ class NoticiaCard extends StatelessWidget {
                     children: [
                       IconButton(
                         icon: const Icon(Icons.favorite_border, size: 22),
-                        color: Colors.grey[600],
+                        color: Colors.white54,
                         onPressed: () {},
                         constraints: const BoxConstraints(),
                         padding: EdgeInsets.zero,
@@ -112,7 +111,7 @@ class NoticiaCard extends StatelessWidget {
                       const SizedBox(width: 20),
                       IconButton(
                         icon: const Icon(Icons.share_outlined, size: 22),
-                        color: Colors.grey[600],
+                        color: Colors.white54,
                         onPressed: () {},
                         constraints: const BoxConstraints(),
                         padding: EdgeInsets.zero,

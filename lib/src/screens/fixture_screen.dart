@@ -27,9 +27,9 @@ class FixtureList extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.sports_soccer, size: 64, color: Colors.grey),
+                Icon(Icons.sports_soccer, size: 64, color: Colors.white24),
                 SizedBox(height: 16),
-                Text('No hay partidos programados.', style: TextStyle(color: Colors.grey)),
+                Text('No hay partidos programados.', style: TextStyle(color: Colors.white54)),
               ],
             ),
           );
@@ -57,14 +57,15 @@ class _PartidoCard extends StatelessWidget {
     final dateFormat = DateFormat('dd/MM HH:mm');
     final esEnVivo = partido.estado == EstadoPartido.jugando;
     final esFinalizado = partido.estado == EstadoPartido.finalizado;
+    final theme = Theme.of(context);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
-      elevation: 2,
-      shadowColor: Colors.black12,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 4,
+      shadowColor: Colors.black26,
+      // El color y forma vienen del Theme global
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         onTap: () {
           Navigator.push(
             context,
@@ -74,10 +75,10 @@ class _PartidoCard extends StatelessWidget {
           );
         },
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
           child: Row(
             children: [
-              // 1. LOCAL (Nombre + Escudo)
+              // 1. LOCAL
               Expanded(
                 flex: 4,
                 child: Row(
@@ -87,7 +88,7 @@ class _PartidoCard extends StatelessWidget {
                       child: Text(
                         partido.local.nombre,
                         textAlign: TextAlign.right,
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.white),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -98,7 +99,7 @@ class _PartidoCard extends StatelessWidget {
                 ),
               ),
 
-              // 2. CENTRO (Resultado o VS)
+              // 2. CENTRO
               Expanded(
                 flex: 3,
                 child: Column(
@@ -115,8 +116,9 @@ class _PartidoCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.grey[100],
+                        color: Colors.white10, // Fondo translúcido oscuro
                         borderRadius: BorderRadius.circular(8),
+                        border: esEnVivo ? Border.all(color: Colors.red.withOpacity(0.5)) : null,
                       ),
                       child: Text(
                         esFinalizado || esEnVivo
@@ -125,20 +127,20 @@ class _PartidoCard extends StatelessWidget {
                         style: TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 15,
-                          color: esEnVivo ? Colors.red[800] : Colors.black87,
+                          color: esEnVivo ? Colors.redAccent : Colors.white,
                         ),
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       esFinalizado ? 'FIN' : dateFormat.format(partido.fecha),
-                      style: TextStyle(fontSize: 10, color: Colors.grey[600], fontWeight: FontWeight.w500),
+                      style: const TextStyle(fontSize: 10, color: Colors.white54, fontWeight: FontWeight.w500),
                     ),
                   ],
                 ),
               ),
 
-              // 3. VISITANTE (Escudo + Nombre)
+              // 3. VISITANTE
               Expanded(
                 flex: 4,
                 child: Row(
@@ -149,7 +151,7 @@ class _PartidoCard extends StatelessWidget {
                       child: Text(
                         partido.visitante.nombre,
                         textAlign: TextAlign.left,
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.white),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -177,11 +179,11 @@ class _EscudoEquipo extends StatelessWidget {
       return Container(
         width: size,
         height: size,
-        decoration: BoxDecoration(
-          color: Colors.grey[200],
+        decoration: const BoxDecoration(
+          color: Colors.white10,
           shape: BoxShape.circle,
         ),
-        child: Icon(Icons.shield, color: Colors.grey[400], size: size * 0.6),
+        child: Icon(Icons.shield, color: Colors.white24, size: size * 0.6),
       );
     }
     return Image.network(
@@ -193,11 +195,11 @@ class _EscudoEquipo extends StatelessWidget {
         return Container(
           width: size,
           height: size,
-          decoration: BoxDecoration(
-            color: Colors.grey[200],
+          decoration: const BoxDecoration(
+            color: Colors.white10,
             shape: BoxShape.circle,
           ),
-          child: Icon(Icons.broken_image, color: Colors.grey[400], size: size * 0.6),
+          child: Icon(Icons.broken_image, color: Colors.white24, size: size * 0.6),
         );
       },
     );

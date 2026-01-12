@@ -11,29 +11,31 @@ class AuthBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF121212),
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Colors.green[900]!,
-              Colors.green[800]!,
-              Colors.green[600]!,
+              Color(0xFF052e16), // Verde muy oscuro
+              Color(0xFF0f172a), // Azul grisáceo oscuro
+              Color(0xFF000000), // Negro
             ],
+            stops: [0.0, 0.6, 1.0],
           ),
         ),
         child: SafeArea(
           child: SingleChildScrollView(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 10.0),
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
               child: Column(
                 children: [
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 40),
                   
-                  // 1. LA PELOTA (Recortada perfectamente)
+                  // LA PELOTA
                   Container(
                     width: 140,
                     height: 140,
@@ -41,77 +43,53 @@ class AuthBackground extends StatelessWidget {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.4),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
+                          color: const Color(0xFF4ade80).withOpacity(0.2),
+                          blurRadius: 40,
+                          spreadRadius: 5,
                         ),
                       ],
-                      // Borde blanco fino para separar del fondo verde
-                      border: Border.all(color: Colors.white, width: 3),
                     ),
                     child: ClipOval(
                       child: Transform.scale(
-                        scale: 1.1, // Hacemos zoom del 10% para cortar bordes blancos
+                        scale: 1.35,
+                        alignment: Alignment.center, 
                         child: Image.asset(
                           'assets/icon/Pelota.png',
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Colors.white,
-                              child: Icon(Icons.sports_soccer, size: 80, color: Colors.green[800]),
-                            );
+                            return const Icon(Icons.sports_soccer, size: 80, color: Colors.white);
                           },
                         ),
                       ),
                     ),
                   ),
                   
-                  const SizedBox(height: 15),
+                  const SizedBox(height: 20),
                   
-                  // 2. EL TÍTULO (Texto nativo sin dependencia externa)
-                  Text(
-                    'LIGA ROCA',
+                  // TÍTULO "CHITO"
+                  const Text(
+                    'CHITO',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontFamily: 'Roboto', // Fuente del sistema
-                      fontSize: 42,
-                      fontWeight: FontWeight.w900, // Lo más grueso posible
-                      color: Colors.white,
-                      letterSpacing: 2,
-                      shadows: [
-                        Shadow(
-                          blurRadius: 15.0,
-                          color: Colors.black.withOpacity(0.5),
-                          offset: const Offset(2, 4),
-                        ),
-                      ],
+                      fontFamily: 'Roboto',
+                      fontSize: 48,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFFFDFDF5),
+                      letterSpacing: 6.0,
+                      height: 1.0,
                     ),
                   ),
                   
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 50),
                   
-                  // Contenedor del Formulario
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.25),
-                          blurRadius: 25,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: child,
-                  ),
+                  // FORMULARIO
+                  child,
                   
                   const SizedBox(height: 20),
                   
                   Text(
                     '© 2024 Liga Roca App',
-                    style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12),
+                    style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 12),
                   ),
                 ],
               ),

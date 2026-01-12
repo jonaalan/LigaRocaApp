@@ -11,27 +11,61 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AuthService authService = AuthService();
-    final env = Provider.of<AppEnvironment>(context);
+    
+    AppEnvironment env;
+    try {
+      env = Provider.of<AppEnvironment>(context);
+    } catch (e) {
+      env = AppEnvironment(type: EnvironmentType.prod, appName: 'Liga Roca');
+    }
+
+    // Definimos la paleta de colores Dark Premium
+    const colorFondo = Color(0xFF121212);
+    const colorTarjetas = Color(0xFF1E293B);
+    const colorPrimario = Color(0xFF4ade80); // Verde Neón
+    const colorTexto = Color(0xFFFDFDF5);
 
     return MaterialApp(
       title: env.appName,
-      debugShowCheckedModeBanner: false, // Quitamos el banner por defecto de Flutter
-      theme: ThemeData(
-        primarySwatch: Colors.green,
-        useMaterial3: true,
+      debugShowCheckedModeBanner: false,
+      
+      // TEMA OSCURO GLOBAL
+      themeMode: ThemeMode.dark,
+      darkTheme: ThemeData(
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: colorFondo,
+        primaryColor: colorPrimario,
+        colorScheme: const ColorScheme.dark(
+          primary: colorPrimario,
+          secondary: colorPrimario,
+          surface: colorTarjetas,
+          background: colorFondo,
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF052e16), // Verde muy oscuro
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+          backgroundColor: Color(0xFF0f172a),
+          selectedItemColor: colorPrimario,
+          unselectedItemColor: Colors.grey,
+        ),
+        // ELIMINADO cardTheme para evitar conflictos de tipos
+        textTheme: const TextTheme(
+          bodyLarge: TextStyle(color: colorTexto),
+          bodyMedium: TextStyle(color: colorTexto),
+          titleLarge: TextStyle(color: colorTexto, fontWeight: FontWeight.bold),
+        ),
         pageTransitionsTheme: const PageTransitionsTheme(
           builders: {
             TargetPlatform.android: ZoomPageTransitionsBuilder(),
             TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
           },
         ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.green,
-          foregroundColor: Colors.white,
-        ),
       ),
+
       builder: (context, child) {
-        // Si estamos en DEV, agregamos un banner visual
         if (env.isDev) {
           return Banner(
             message: env.bannerMessage ?? 'DEV',

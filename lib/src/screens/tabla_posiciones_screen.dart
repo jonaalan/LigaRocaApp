@@ -10,57 +10,73 @@ class TablaPosicionesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final firestoreService = FirestoreService();
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Tabla de Posiciones')),
-      body: StreamBuilder<List<Partido>>(
-        stream: firestoreService.getPartidos(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}'));
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+    // Quitamos el Scaffold para que sea transparente y se vea el fondo del HomeScreen
+    return StreamBuilder<List<Partido>>(
+      stream: firestoreService.getPartidos(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}'));
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
-          final partidos = snapshot.data!;
-          final tabla = _calcularTabla(partidos);
+        final partidos = snapshot.data!;
+        final tabla = _calcularTabla(partidos);
 
-          return SingleChildScrollView(
+        if (tabla.isEmpty) {
+          return const Center(child: Text('No hay datos para la tabla.', style: TextStyle(color: Colors.white54)));
+        }
+
+        return SingleChildScrollView(
+          scrollDirection: Axis.vertical,
+          child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            child: DataTable(
-              columns: const [
-                DataColumn(label: Text('Equipo')),
-                DataColumn(label: Text('Pts', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('PJ')),
-                DataColumn(label: Text('PG')),
-                DataColumn(label: Text('PE')),
-                DataColumn(label: Text('PP')),
-                DataColumn(label: Text('GF')),
-                DataColumn(label: Text('GC')),
-                DataColumn(label: Text('DG')),
-              ],
-              rows: tabla.map((fila) {
-                return DataRow(cells: [
-                  DataCell(Row(
-                    children: [
-                      if (fila.equipo.escudoUrl.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8.0),
-                          child: Image.network(fila.equipo.escudoUrl, width: 20, height: 20),
-                        ),
-                      Text(fila.equipo.nombre),
-                    ],
-                  )),
-                  DataCell(Text(fila.puntos.toString(), style: const TextStyle(fontWeight: FontWeight.bold))),
-                  DataCell(Text(fila.pj.toString())),
-                  DataCell(Text(fila.pg.toString())),
-                  DataCell(Text(fila.pe.toString())),
-                  DataCell(Text(fila.pp.toString())),
-                  DataCell(Text(fila.gf.toString())),
-                  DataCell(Text(fila.gc.toString())),
-                  DataCell(Text(fila.dg.toString())),
-                ]);
-              }).toList(),
+            child: Theme(
+              data: Theme.of(context).copyWith(dividerColor: Colors.white24),
+              child: DataTable(
+                headingTextStyle: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                dataTextStyle: const TextStyle(color: Colors.white70),
+                columnSpacing: 20,
+                columns: const [
+                  DataColumn(label: Text('Equipo')),
+                  DataColumn(label: Text('Pts', style: TextStyle(color: Colors.greenAccent))),
+                  DataColumn(label: Text('PJ')),
+                  DataColumn(label: Text('PG')),
+                  DataColumn(label: Text('PE')),
+                  DataColumn(label: Text('PP')),
+                  DataColumn(label: Text('GF')),
+                  DataColumn(label: Text('GC')),
+                  DataColumn(label: Text('DG')),
+                ],
+                rows: tabla.map((fila) {
+                  return DataRow(cells: [
+                    DataCell(Row(
+                      children: [
+                        if (fila.equipo.escudoUrl.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: Image.network(
+                              fila.equipo.escudoUrl, 
+                              width: 24, 
+                              height: 24,
+                              errorBuilder: (context, error, stackTrace) => const Icon(Icons.shield, size: 16, color: Colors.white24),
+                            ),
+                          ),
+                        Text(fila.equipo.nombre, style: const TextStyle(fontWeight: FontWeight.w600)),
+                      ],
+                    )),
+                    DataCell(Text(fila.puntos.toString(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.greenAccent))),
+                    DataCell(Text(fila.pj.toString())),
+                    DataCell(Text(fila.pg.toString())),
+                    DataCell(Text(fila.pe.toString())),
+                    DataCell(Text(fila.pp.toString())),
+                    DataCell(Text(fila.gf.toString())),
+                    DataCell(Text(fila.gc.toString())),
+                    DataCell(Text(fila.dg.toString())),
+                  ]);
+                }).toList(),
+              ),
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -68,11 +84,11 @@ class TablaPosicionesScreen extends StatelessWidget {
     final Map<String, _FilaTabla> tabla = {};
 
     for (var partido in partidos) {
-      if (partido.estado != EstadoPartido.finalizado) continue;
-
-      // Asegurar que existan las entradas en la tabla
+      // Asegurar que existan las entradas en la tabla para TODOS los equipos, incluso si no jugaron
       tabla.putIfAbsent(partido.local.id, () => _FilaTabla(partido.local));
       tabla.putIfAbsent(partido.visitante.id, () => _FilaTabla(partido.visitante));
+
+      if (partido.estado != EstadoPartido.finalizado) continue;
 
       final local = tabla[partido.local.id]!;
       final visitante = tabla[partido.visitante.id]!;

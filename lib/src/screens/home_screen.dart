@@ -1,15 +1,18 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import '../models/usuario.dart';
+import '../models/partido.dart';
 import '../services/auth_service.dart';
+import '../services/firestore_service.dart';
 import '../widgets/noticias_feed.dart';
-import '../widgets/web_container.dart';
-import '../widgets/publicidad_banner.dart'; // Importamos el banner
+import '../widgets/publicidad_banner.dart';
 import 'fixture_screen.dart';
-import 'registro_screen.dart';
+import 'login_screen.dart';
 import 'tabla_posiciones_screen.dart';
 import 'admin/admin_noticias_screen.dart';
 import 'admin/admin_fixture_screen.dart';
 import 'admin/admin_equipos_screen.dart';
-import 'admin/admin_publicidad_screen.dart'; // Importamos admin publicidad
+import 'admin/admin_publicidad_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -20,28 +23,108 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final AuthService _authService = AuthService();
-  
-  Map<String, dynamic>? _userData;
+  final FirestoreService _firestoreService = FirestoreService();
+
+  Usuario? _usuario;
   bool _isLoadingUser = true;
   int _selectedIndex = 0;
+  StreamSubscription? _golesSubscription;
+  late PageController _pageController; // Controlador para el PageView
+
+  late List<Widget> _screens;
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(initialPage: _selectedIndex);
     _loadUserData();
   }
 
+  @override
+  void dispose() {
+    _golesSubscription?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadUserData() async {
-    final data = await _authService.getUserData();
-    if (mounted) {
-      setState(() {
-        _userData = data;
-        _isLoadingUser = false;
-      });
+    try {
+      final usuario = await _authService.getUsuarioActual();
+      if (mounted) {
+        setState(() {
+          _usuario = usuario;
+          _isLoadingUser = false;
+          _initScreens();
+        });
+        _escucharGoles();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingUser = false;
+          _initScreens();
+        });
+      }
     }
   }
 
+  void _escucharGoles() {
+    _golesSubscription = _firestoreService.getPartidos().listen((partidos) {
+      // Lógica real iría aquí
+    });
+  }
+
+  void _simularNotificacionGol() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.sports_soccer, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('¡GOL DE TU EQUIPO!', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.greenAccent)),
+                  Text('${_usuario?.equipoFavoritoNombre ?? "Equipo"} acaba de marcar.', style: const TextStyle(fontSize: 12)),
+                ],
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.grey[900],
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  void _initScreens() {
+    final String? equipoId = _usuario?.equipoFavoritoId;
+    final String nombreEquipo = _usuario?.equipoFavoritoNombre ?? 'Tu Equipo';
+
+    _screens = [
+      RepaintBoundary(child: NoticiasFeed(equipoId: equipoId, nombreEquipo: nombreEquipo)),
+      const RepaintBoundary(child: FixtureList()),
+      const RepaintBoundary(child: TablaPosicionesScreen()),
+    ];
+  }
+
   void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+      _pageController.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  void _onPageChanged(int index) {
     setState(() {
       _selectedIndex = index;
     });
@@ -53,22 +136,24 @@ class _HomeScreenState extends State<HomeScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final String? equipoId = _userData?['equipoFavoritoId'];
-    final String nombreEquipo = _userData?['equipoFavoritoNombre'] ?? 'Tu Equipo';
-    final String rol = _userData?['rol'] ?? 'hincha';
-
-    final List<Widget> screens = [
-      NoticiasFeed(equipoId: equipoId, nombreEquipo: nombreEquipo),
-      const FixtureList(),
-      const TablaPosicionesScreen(),
-    ];
+    String titulo = 'Liga Roca';
+    if (_selectedIndex == 1) titulo = 'Fixture';
+    if (_selectedIndex == 2) titulo = 'Posiciones';
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text(_selectedIndex == 0 ? 'Liga Roca' : (_selectedIndex == 1 ? 'Fixture' : 'Posiciones')),
+        title: Text(titulo),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         actions: [
-          // Menú Admin
-          if (rol == 'admin')
+          IconButton(
+            icon: const Icon(Icons.notifications_active_outlined),
+            tooltip: 'Simular Gol',
+            onPressed: _simularNotificacionGol,
+          ),
+
+          if (_usuario?.rol == RolUsuario.admin)
             PopupMenuButton<String>(
               icon: const Icon(Icons.admin_panel_settings),
               tooltip: 'Panel de Administración',
@@ -102,25 +187,47 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
-
+          
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await _authService.logout();
               if (mounted) {
                 Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (context) => const RegistroScreen()),
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
                 );
               }
             },
           )
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(child: WebContainer(child: screens[_selectedIndex])),
-          const PublicidadBanner(), // Banner fijo abajo
-        ],
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF052e16),
+              Color(0xFF0f172a),
+              Color(0xFF000000),
+            ],
+            stops: [0.0, 0.6, 1.0],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: PageView(
+                  controller: _pageController,
+                  onPageChanged: _onPageChanged,
+                  children: _screens,
+                ),
+              ),
+              const PublicidadBanner(),
+            ],
+          ),
+        ),
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
@@ -138,7 +245,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.green[800],
+        selectedItemColor: Colors.green[400],
+        backgroundColor: const Color(0xFF000000),
+        elevation: 0,
         onTap: _onItemTapped,
       ),
     );
