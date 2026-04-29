@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Importación necesaria para el reset
 import '../services/auth_service.dart';
 import 'home_screen.dart';
 import 'registro_screen.dart';
@@ -19,6 +20,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   final AuthService _authService = AuthService();
 
+  // --- FUNCIÓN PARA LOGIN ---
   Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
@@ -46,6 +48,67 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  // --- CAMBIO #4: FUNCIÓN PARA RECUPERAR CONTRASEÑA ---
+  void _mostrarDialogoRecuperarPassword() {
+    final TextEditingController resetEmailController = TextEditingController();
+    // Pre-cargar el email si el usuario ya lo escribió en el login
+    resetEmailController.text = _emailController.text;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Recuperar Contraseña'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Te enviaremos un correo con un enlace para restablecer tu contraseña.'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: resetEmailController,
+              decoration: const InputDecoration(
+                labelText: 'Correo Electrónico',
+                prefixIcon: Icon(Icons.email),
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.emailAddress,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCELAR'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (resetEmailController.text.isNotEmpty) {
+                try {
+                  await FirebaseAuth.instance.sendPasswordResetEmail(
+                    email: resetEmailController.text.trim(),
+                  );
+                  if (mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Correo de recuperación enviado. Revisa tu bandeja de entrada.')),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error: No se pudo enviar el correo. Verifique el email.')),
+                    );
+                  }
+                }
+              }
+            },
+            child: const Text('ENVIAR'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- FUNCIÓN SOPORTE ---
   Future<void> _contactarSoporte() async {
     final Uri emailLaunchUri = Uri(
       scheme: 'mailto',
@@ -86,7 +149,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Image.asset('assets/icon/Chitologo1024.png'),
                 ),
                 const SizedBox(height: 24),
-                
+
                 TextFormField(
                   controller: _emailController,
                   decoration: const InputDecoration(
@@ -109,22 +172,22 @@ class _LoginScreenState extends State<LoginScreen> {
                   validator: (v) => v!.isEmpty ? 'Ingrese su contraseña' : null,
                 ),
                 const SizedBox(height: 24),
-                
+
                 SizedBox(
                   width: double.infinity,
                   height: 50,
                   child: _isLoading
                       ? const Center(child: CircularProgressIndicator())
                       : ElevatedButton(
-                          onPressed: _login,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green[800],
-                            foregroundColor: Colors.white,
-                          ),
-                          child: const Text('INGRESAR', style: TextStyle(fontSize: 16)),
-                        ),
+                    onPressed: _login,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green[800],
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('INGRESAR', style: TextStyle(fontSize: 16)),
+                  ),
                 ),
-                
+
                 const SizedBox(height: 16),
                 TextButton(
                   onPressed: () {
@@ -133,6 +196,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     );
                   },
                   child: const Text('¿No tienes cuenta? Regístrate'),
+                ),
+
+                // BOTÓN DE RECUPERAR PASSWORD (PARTE DEL CAMBIO #4)
+                TextButton(
+                  onPressed: _mostrarDialogoRecuperarPassword,
+                  child: const Text('¿Olvidaste tu contraseña?',
+                      style: TextStyle(color: Colors.blueGrey)),
                 ),
 
                 const SizedBox(height: 40),

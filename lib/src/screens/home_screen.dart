@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../widgets/noticias_feed.dart';
 import '../widgets/web_container.dart';
-import '../widgets/publicidad_banner.dart'; // Importamos el banner
+import '../widgets/publicidad_banner.dart';
+import '../widgets/campanita_notificaciones.dart'; // IMPORT DE LA CAMPANITA
 import 'fixture_screen.dart';
 import 'registro_screen.dart';
 import 'tabla_posiciones_screen.dart';
 import 'admin/admin_noticias_screen.dart';
 import 'admin/admin_fixture_screen.dart';
 import 'admin/admin_equipos_screen.dart';
-import 'admin/admin_publicidad_screen.dart'; // Importamos admin publicidad
+import 'admin/admin_publicidad_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -20,7 +21,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final AuthService _authService = AuthService();
-  
+
   Map<String, dynamic>? _userData;
   bool _isLoadingUser = true;
   int _selectedIndex = 0;
@@ -67,6 +68,10 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: Text(_selectedIndex == 0 ? 'Liga Roca' : (_selectedIndex == 1 ? 'Fixture' : 'Posiciones')),
         actions: [
+          // LA CAMPANITA CON PUNTO ROJO (Visible para todos)
+          // Pasamos el equipoId para que filtre las notificaciones de su equipo
+          CampanitaNotificaciones(equipoIdSeguido: equipoId, rol: rol,),
+
           // Menú Admin
           if (rol == 'admin')
             PopupMenuButton<String>(

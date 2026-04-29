@@ -21,42 +21,47 @@ class TablaPosicionesScreen extends StatelessWidget {
           final partidos = snapshot.data!;
           final tabla = _calcularTabla(partidos);
 
+          // CAMBIO NÚMERO 2: Se agrega Scroll Vertical rodeando al Horizontal
           return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              columns: const [
-                DataColumn(label: Text('Equipo')),
-                DataColumn(label: Text('Pts', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('PJ')),
-                DataColumn(label: Text('PG')),
-                DataColumn(label: Text('PE')),
-                DataColumn(label: Text('PP')),
-                DataColumn(label: Text('GF')),
-                DataColumn(label: Text('GC')),
-                DataColumn(label: Text('DG')),
-              ],
-              rows: tabla.map((fila) {
-                return DataRow(cells: [
-                  DataCell(Row(
-                    children: [
-                      if (fila.equipo.escudoUrl.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8.0),
-                          child: Image.network(fila.equipo.escudoUrl, width: 20, height: 20),
-                        ),
-                      Text(fila.equipo.nombre),
-                    ],
-                  )),
-                  DataCell(Text(fila.puntos.toString(), style: const TextStyle(fontWeight: FontWeight.bold))),
-                  DataCell(Text(fila.pj.toString())),
-                  DataCell(Text(fila.pg.toString())),
-                  DataCell(Text(fila.pe.toString())),
-                  DataCell(Text(fila.pp.toString())),
-                  DataCell(Text(fila.gf.toString())),
-                  DataCell(Text(fila.gc.toString())),
-                  DataCell(Text(fila.dg.toString())),
-                ]);
-              }).toList(),
+            scrollDirection: Axis.vertical, // <--- ESTO PERMITE BAJAR
+            physics: const BouncingScrollPhysics(),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal, // <--- ESTO PERMITE MOVER A LOS LADOS
+              child: DataTable(
+                columns: const [
+                  DataColumn(label: Text('Equipo')),
+                  DataColumn(label: Text('Pts', style: TextStyle(fontWeight: FontWeight.bold))),
+                  DataColumn(label: Text('PJ')),
+                  DataColumn(label: Text('PG')),
+                  DataColumn(label: Text('PE')),
+                  DataColumn(label: Text('PP')),
+                  DataColumn(label: Text('GF')),
+                  DataColumn(label: Text('GC')),
+                  DataColumn(label: Text('DG')),
+                ],
+                rows: tabla.map((fila) {
+                  return DataRow(cells: [
+                    DataCell(Row(
+                      children: [
+                        if (fila.equipo.escudoUrl.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: Image.network(fila.equipo.escudoUrl, width: 20, height: 20),
+                          ),
+                        Text(fila.equipo.nombre),
+                      ],
+                    )),
+                    DataCell(Text(fila.puntos.toString(), style: const TextStyle(fontWeight: FontWeight.bold))),
+                    DataCell(Text(fila.pj.toString())),
+                    DataCell(Text(fila.pg.toString())),
+                    DataCell(Text(fila.pe.toString())),
+                    DataCell(Text(fila.pp.toString())),
+                    DataCell(Text(fila.gf.toString())),
+                    DataCell(Text(fila.gc.toString())),
+                    DataCell(Text(fila.dg.toString())),
+                  ]);
+                }).toList(),
+              ),
             ),
           );
         },
@@ -64,13 +69,13 @@ class TablaPosicionesScreen extends StatelessWidget {
     );
   }
 
+  // --- LA LÓGICA SIGUIENTE NO SE TOCA (REGLA DE ORO) ---
   List<_FilaTabla> _calcularTabla(List<Partido> partidos) {
     final Map<String, _FilaTabla> tabla = {};
 
     for (var partido in partidos) {
       if (partido.estado != EstadoPartido.finalizado) continue;
 
-      // Asegurar que existan las entradas en la tabla
       tabla.putIfAbsent(partido.local.id, () => _FilaTabla(partido.local));
       tabla.putIfAbsent(partido.visitante.id, () => _FilaTabla(partido.visitante));
 
@@ -101,7 +106,6 @@ class TablaPosicionesScreen extends StatelessWidget {
     }
 
     final lista = tabla.values.toList();
-    // Ordenar: Puntos DESC, Diferencia de Gol DESC, Goles a Favor DESC
     lista.sort((a, b) {
       if (b.puntos != a.puntos) return b.puntos.compareTo(a.puntos);
       if (b.dg != a.dg) return b.dg.compareTo(a.dg);

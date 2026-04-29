@@ -10,177 +10,125 @@ class FixtureList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final firestoreService = FirestoreService();
-    final dateFormat = DateFormat('dd/MM HH:mm');
+    const Color verdeChito = Color(0xFF1A4D2E);
 
     return StreamBuilder<List<Partido>>(
       stream: firestoreService.getPartidos(),
       builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        }
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
-        final partidos = snapshot.data!;
-        if (partidos.isEmpty) {
-          return const Center(child: Text('No hay partidos programados.'));
-        }
+        final todos = snapshot.data!;
 
-        return ListView.builder(
-          itemCount: partidos.length,
-          itemBuilder: (context, index) {
-            final partido = partidos[index];
-            return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              elevation: 2,
-              child: InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => PartidoDetalleScreen(partido: partido),
-                    ),
-                  );
-                },
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    children: [
-                      // Fecha y Estado
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            dateFormat.format(partido.fecha),
-                            style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                          ),
-                          if (partido.estado == EstadoPartido.jugando)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 8.0),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(4)),
-                                child: const Text('EN VIVO', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      
-                      // Equipos y Resultado
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          // Local
-                          Expanded(
-                            flex: 3,
-                            child: Column(
-                              children: [
-                                _EscudoEquipo(url: partido.local.escudoUrl),
-                                const SizedBox(height: 4),
-                                Text(
-                                  partido.local.nombre, 
-                                  textAlign: TextAlign.center, 
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                          
-                          // Marcador Central
-                          Expanded(
-                            flex: 2,
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 4),
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              decoration: BoxDecoration(
-                                color: partido.estado == EstadoPartido.jugando 
-                                    ? Colors.red.withOpacity(0.1) 
-                                    : (partido.finalizado ? Colors.black87 : Colors.grey[200]),
-                                borderRadius: BorderRadius.circular(8),
-                                border: partido.estado == EstadoPartido.jugando ? Border.all(color: Colors.red) : null,
-                              ),
-                              child: Center(
-                                child: Text(
-                                  partido.estado == EstadoPartido.pendiente
-                                      ? 'VS'
-                                      : '${partido.golesLocal} - ${partido.golesVisitante}',
-                                  style: TextStyle(
-                                    color: partido.finalizado ? Colors.white : Colors.black,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
+        // Obtenemos todas las categorías únicas
+        final categorias = todos.map((p) => p.categoria).toSet().toList()..sort();
 
-                          // Visitante
-                          Expanded(
-                            flex: 3,
-                            child: Column(
-                              children: [
-                                _EscudoEquipo(url: partido.visitante.escudoUrl),
-                                const SizedBox(height: 4),
-                                Text(
-                                  partido.visitante.nombre, 
-                                  textAlign: TextAlign.center, 
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      
-                      if (partido.finalizado)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Text('Finalizado', style: TextStyle(color: Colors.green[700], fontSize: 12, fontWeight: FontWeight.bold)),
-                        ),
-                    ],
-                  ),
+        if (todos.isEmpty) return const Center(child: Text('No hay partidos cargados.'));
+
+        return DefaultTabController(
+          key: ValueKey(categorias.length),
+          length: categorias.length,
+          child: Column(
+            children: [
+              TabBar(
+                isScrollable: true,
+                labelColor: verdeChito,
+                indicatorColor: verdeChito,
+                unselectedLabelColor: Colors.grey,
+                tabs: categorias.map((c) => Tab(text: c.toUpperCase())).toList(),
+              ),
+              Expanded(
+                child: TabBarView(
+                  children: categorias.map((cat) {
+                    final filtrados = todos.where((p) => p.categoria == cat).toList()
+                      ..sort((a, b) => b.numeroFecha.compareTo(a.numeroFecha));
+                    return _buildLista(filtrados, verdeChito);
+                  }).toList(),
                 ),
               ),
-            );
-          },
+            ],
+          ),
         );
       },
     );
   }
-}
 
-class _EscudoEquipo extends StatelessWidget {
-  final String url;
-
-  const _EscudoEquipo({required this.url});
-
-  @override
-  Widget build(BuildContext context) {
-    if (url.isEmpty) {
-      return const CircleAvatar(
-        radius: 20, // Reduje un poco el tamaño para evitar overflow vertical
-        backgroundColor: Colors.grey,
-        child: Icon(Icons.shield, color: Colors.white, size: 20),
-      );
-    }
-    return Image.network(
-      url,
-      height: 40, // Tamaño fijo controlado
-      width: 40,
-      fit: BoxFit.contain,
-      errorBuilder: (context, error, stackTrace) {
-        return const CircleAvatar(
-          radius: 20,
-          backgroundColor: Colors.grey,
-          child: Icon(Icons.error, color: Colors.white, size: 20),
+  Widget _buildLista(List<Partido> partidos, Color verdeChito) {
+    final df = DateFormat('dd/MM HH:mm');
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      itemCount: partidos.length,
+      itemBuilder: (context, index) {
+        final p = partidos[index];
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          elevation: 3,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: InkWell(
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PartidoDetalleScreen(partido: p))),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
+              child: Row(
+                children: [
+                  _equipoCol(p.local.nombre, p.local.escudoUrl),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        // AQUÍ SE QUITÓ EL 'const' QUE DABA ERROR
+                        Text(
+                            'JORNADA ${p.numeroFecha}',
+                            style: TextStyle(color: verdeChito, fontSize: 11, fontWeight: FontWeight.bold)
+                        ),
+                        const SizedBox(height: 5),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                              color: p.finalizado ? verdeChito : Colors.grey[200],
+                              borderRadius: BorderRadius.circular(8)
+                          ),
+                          child: Text(
+                            p.estado == EstadoPartido.pendiente ? 'VS' : '${p.golesLocal} - ${p.golesVisitante}',
+                            style: TextStyle(
+                                color: p.finalizado ? Colors.white : Colors.black,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(df.format(p.fecha), style: TextStyle(color: Colors.grey[600], fontSize: 10)),
+                      ],
+                    ),
+                  ),
+                  _equipoCol(p.visitante.nombre, p.visitante.escudoUrl),
+                ],
+              ),
+            ),
+          ),
         );
       },
+    );
+  }
+
+  Widget _equipoCol(String nombre, String url) {
+    return Expanded(
+      child: Column(
+        children: [
+          (url.isEmpty || url == 'null')
+              ? const Icon(Icons.shield, size: 45, color: Colors.grey)
+              : Image.network(
+            url,
+            height: 45, width: 45,
+            fit: BoxFit.contain,
+            errorBuilder: (_,__,___) => const Icon(Icons.shield, size: 45, color: Colors.grey),
+          ),
+          const SizedBox(height: 8),
+          Text(
+              nombre,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)
+          ),
+        ],
+      ),
     );
   }
 }
