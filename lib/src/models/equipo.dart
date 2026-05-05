@@ -9,6 +9,15 @@ class Equipo {
     required this.escudoUrl,
   });
 
+  // ESTA ES LA FUNCIÓN QUE FALTABA PARA LEER DE FIREBASE
+  factory Equipo.fromMap(String id, Map<String, dynamic> data) {
+    return Equipo(
+      id: id,
+      nombre: data['nombre'] ?? 'Sin nombre',
+      escudoUrl: data['escudoUrl'] ?? '',
+    );
+  }
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;

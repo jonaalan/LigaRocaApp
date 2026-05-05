@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import '../models/equipo.dart';
 import '../services/auth_service.dart';
-import '../services/firestore_service.dart';
-import 'home_screen.dart';
-import 'login_screen.dart';
+import '../models/equipo.dart';
+import '../services/equipo_service.dart';
 
 class RegistroScreen extends StatefulWidget {
   const RegistroScreen({super.key});
@@ -13,130 +11,123 @@ class RegistroScreen extends StatefulWidget {
 }
 
 class _RegistroScreenState extends State<RegistroScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _nombreController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
+  final EquipoService _equipoService = EquipoService();
+  final TextEditingController _nombreController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
   Equipo? _equipoSeleccionado;
+  List<Equipo> _equipos = [];
   bool _isLoading = false;
 
-  final AuthService _authService = AuthService();
-  final FirestoreService _firestoreService = FirestoreService();
+  final Color _verdeEsmeralda = const Color(0xFF00C853);
+  final Color _verdeMuyOscuro = const Color(0xFF051209);
+  final Color _negroProfundo = const Color(0xFF000000);
+  final Color _inputBackground = const Color(0xFF1E272E);
+  final Color _grisPlata = const Color(0xFFBDC3C7);
 
-  Future<void> _registrarse() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
+  @override
+  void initState() {
+    super.initState();
+    _cargarEquipos();
+  }
 
-      try {
-        await _authService.registrarUsuario(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
-          nombre: _nombreController.text.trim(),
-          equipoFavorito: _equipoSeleccionado!,
-        );
-
-        if (mounted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error al registrarse: $e')),
-          );
-        }
-      } finally {
-        if (mounted) setState(() => _isLoading = false);
-      }
-    }
+  Future<void> _cargarEquipos() async {
+    final equipos = await _equipoService.getEquipos();
+    setState(() => _equipos = equipos);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Registro Liga Roca')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              TextFormField(
-                controller: _nombreController,
-                decoration: const InputDecoration(labelText: 'Nombre Completo'),
-                validator: (v) => v!.isEmpty ? 'Ingrese su nombre' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Correo Electrónico'),
-                keyboardType: TextInputType.emailAddress,
-                validator: (v) => v!.isEmpty ? 'Ingrese su email' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _passwordController,
-                decoration: const InputDecoration(labelText: 'Contraseña'),
-                obscureText: true,
-                validator: (v) => v!.length < 6 ? 'Mínimo 6 caracteres' : null,
-              ),
-              const SizedBox(height: 16),
+      backgroundColor: _negroProfundo,
+      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0, iconTheme: const IconThemeData(color: Colors.white)),
+      extendBodyBehindAppBar: true,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: RadialGradient(center: const Alignment(0, -0.6), radius: 1.2, colors: [_verdeMuyOscuro, _negroProfundo]),
+        ),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 30),
+            child: Column(
+              children: [
+                const SizedBox(height: 100),
+                Text('NUEVO HINCHA', style: TextStyle(color: _verdeEsmeralda, fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: 4)),
+                const SizedBox(height: 40),
+                _buildInput(controller: _nombreController, hint: 'NOMBRE', icon: Icons.person_outline),
+                const SizedBox(height: 15),
+                _buildInput(controller: _emailController, hint: 'EMAIL', icon: Icons.email_outlined, keyboardType: TextInputType.emailAddress),
+                const SizedBox(height: 15),
+                _buildInput(controller: _passwordController, hint: 'CONTRASEÑA', icon: Icons.lock_outline, isPassword: true),
+                const SizedBox(height: 15),
 
-              // Selector de Equipos desde Firestore
-              StreamBuilder<List<Equipo>>(
-                stream: _firestoreService.getEquipos(),
-                builder: (context, snapshot) {
-                  if (snapshot.hasError) {
-                    return Text('Error cargando equipos: ${snapshot.error}');
-                  }
-
-                  if (!snapshot.hasData) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  final equipos = snapshot.data!;
-
-                  return DropdownButtonFormField<Equipo>(
-                    decoration: const InputDecoration(labelText: 'Equipo Favorito'),
-                    value: _equipoSeleccionado,
-                    items: equipos.map((equipo) {
-                      return DropdownMenuItem(
-                        value: equipo,
-                        child: Text(equipo.nombre),
-                      );
-                    }).toList(),
-                    onChanged: (Equipo? nuevoEquipo) {
-                      setState(() {
-                        _equipoSeleccionado = nuevoEquipo;
-                      });
-                    },
-                    validator: (value) => value == null ? 'Seleccione un equipo' : null,
-                  );
-                },
-              ),
-
-              const SizedBox(height: 24),
-
-              _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : ElevatedButton(
-                      onPressed: _registrarse,
-                      child: const Text('Registrarse'),
+                // Selector de Equipo Estilizado
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  decoration: BoxDecoration(color: _inputBackground, borderRadius: BorderRadius.circular(12)),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<Equipo>(
+                      isExpanded: true,
+                      dropdownColor: _inputBackground,
+                      value: _equipoSeleccionado,
+                      hint: Text('TU EQUIPO', style: TextStyle(color: _grisPlata, fontSize: 12)),
+                      style: const TextStyle(color: Colors.white),
+                      items: _equipos.map((e) => DropdownMenuItem(value: e, child: Text(e.nombre))).toList(),
+                      onChanged: (val) => setState(() => _equipoSeleccionado = val),
                     ),
-              
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (context) => const LoginScreen()),
-                  );
-                },
-                child: const Text('¿Ya tienes cuenta? Inicia sesión'),
-              ),
-            ],
+                  ),
+                ),
+                const SizedBox(height: 40),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: _verdeEsmeralda, foregroundColor: Colors.black, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25))),
+                    onPressed: _isLoading ? null : () async {
+                      setState(() => _isLoading = true);
+                      try {
+                        await _authService.registrarUsuario(
+                          email: _emailController.text.trim(),
+                          password: _passwordController.text.trim(),
+                          nombre: _nombreController.text.trim(),
+                          equipoFavorito: _equipoSeleccionado!,
+                        );
+                        Navigator.pop(context);
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                      } finally {
+                        setState(() => _isLoading = false);
+                      }
+                    },
+                    child: _isLoading ? const CircularProgressIndicator(color: Colors.black) : const Text('REGISTRARME', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInput({required TextEditingController controller, required String hint, required IconData icon, bool isPassword = false, TextInputType keyboardType = TextInputType.text}) {
+    return Container(
+      decoration: BoxDecoration(color: _inputBackground, borderRadius: BorderRadius.circular(12)),
+      child: TextField(
+        controller: controller,
+        obscureText: isPassword,
+        keyboardType: keyboardType,
+        style: const TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: TextStyle(color: _grisPlata.withOpacity(0.5), fontSize: 12),
+          prefixIcon: Icon(icon, color: _grisPlata, size: 18),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
         ),
       ),
     );

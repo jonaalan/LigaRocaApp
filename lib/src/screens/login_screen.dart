@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Importación necesaria para el reset
 import '../services/auth_service.dart';
 import 'home_screen.dart';
 import 'registro_screen.dart';
@@ -13,119 +11,61 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-
-  bool _isLoading = false;
   final AuthService _authService = AuthService();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool _isLoading = false;
+  bool _obscurePassword = true;
 
-  // --- FUNCIÓN PARA LOGIN ---
+  // --- PALETA DARK ESMERALDA ---
+  final Color _verdeEsmeralda = const Color(0xFF00C853);
+  final Color _verdeMuyOscuro = const Color(0xFF051209);
+  final Color _negroProfundo = const Color(0xFF000000);
+  final Color _inputBackground = const Color(0xFF1E272E);
+  final Color _grisPlata = const Color(0xFFBDC3C7);
+
   Future<void> _login() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
-
-      try {
-        await _authService.login(
-          _emailController.text.trim(),
-          _passwordController.text.trim(),
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor, completa todos los campos')),
+      );
+      return;
+    }
+    setState(() => _isLoading = true);
+    try {
+      await _authService.login(_emailController.text.trim(), _passwordController.text.trim());
+      if (mounted) {
+        Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const HomeScreen()));
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error al ingresar: Verifique sus datos')),
         );
-
-        if (mounted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error al iniciar sesión: $e')),
-          );
-        }
-      } finally {
-        if (mounted) setState(() => _isLoading = false);
       }
     }
   }
 
-  // --- CAMBIO #4: FUNCIÓN PARA RECUPERAR CONTRASEÑA ---
-  void _mostrarDialogoRecuperarPassword() {
-    final TextEditingController resetEmailController = TextEditingController();
-    // Pre-cargar el email si el usuario ya lo escribió en el login
-    resetEmailController.text = _emailController.text;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Recuperar Contraseña'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Te enviaremos un correo con un enlace para restablecer tu contraseña.'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: resetEmailController,
-              decoration: const InputDecoration(
-                labelText: 'Correo Electrónico',
-                prefixIcon: Icon(Icons.email),
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.emailAddress,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('CANCELAR'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (resetEmailController.text.isNotEmpty) {
-                try {
-                  await FirebaseAuth.instance.sendPasswordResetEmail(
-                    email: resetEmailController.text.trim(),
-                  );
-                  if (mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Correo de recuperación enviado. Revisa tu bandeja de entrada.')),
-                    );
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error: No se pudo enviar el correo. Verifique el email.')),
-                    );
-                  }
-                }
-              }
-            },
-            child: const Text('ENVIAR'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --- FUNCIÓN SOPORTE ---
-  Future<void> _contactarSoporte() async {
-    final Uri emailLaunchUri = Uri(
-      scheme: 'mailto',
-      path: 'soporte.ligaroca@gmail.com',
-      query: 'subject=Consulta sobre Liga Roca App',
-    );
-
+  // --- FUNCIÓN PARA RECUPERAR CONTRASEÑA ---
+  Future<void> _resetPassword() async {
+    if (_emailController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ingresa tu email para recuperar la contraseña')),
+      );
+      return;
+    }
     try {
-      if (await canLaunchUrl(emailLaunchUri)) {
-        await launchUrl(emailLaunchUri);
-      } else {
-        throw 'No se pudo abrir el correo';
+      await _authService.sendPasswordResetEmail(_emailController.text.trim());
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Correo de recuperación enviado')),
+        );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Escriba a: soporte.ligaroca@gmail.com')),
+          const SnackBar(content: Text('Error al enviar el correo de recuperación')),
         );
       }
     }
@@ -134,87 +74,182 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Iniciar Sesión')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
+      backgroundColor: _negroProfundo,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: RadialGradient(
+            center: const Alignment(0, -0.5),
+            radius: 1.2,
+            colors: [_verdeMuyOscuro, _negroProfundo],
+          ),
+        ),
+        child: Center(
           child: SingleChildScrollView(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Logo de la App
-                SizedBox(
-                  height: 150,
-                  child: Image.asset('assets/icon/Chitologo1024.png'),
-                ),
-                const SizedBox(height: 24),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 30),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 40),
 
-                TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'Correo Electrónico',
-                    prefixIcon: Icon(Icons.email),
-                    border: OutlineInputBorder(),
+                  // --- PELOTA 3D ---
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Container(
+                        width: 160,
+                        height: 160,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: _verdeEsmeralda.withOpacity(0.2),
+                              blurRadius: 60,
+                              spreadRadius: 5,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Image.network(
+                        'https://pngimg.com/uploads/football/football_PNG52789.png',
+                        height: 130,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) =>
+                        const Icon(Icons.sports_soccer, size: 80, color: Colors.white),
+                      ),
+                    ],
                   ),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (v) => v!.isEmpty ? 'Ingrese su email' : null,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: const InputDecoration(
-                    labelText: 'Contraseña',
-                    prefixIcon: Icon(Icons.lock),
-                    border: OutlineInputBorder(),
-                  ),
-                  obscureText: true,
-                  validator: (v) => v!.isEmpty ? 'Ingrese su contraseña' : null,
-                ),
-                const SizedBox(height: 24),
 
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: _isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : ElevatedButton(
-                    onPressed: _login,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green[800],
-                      foregroundColor: Colors.white,
+                  const SizedBox(height: 15),
+
+                  // --- TEXTO CHITO (Estilo Alpha) ---
+                  Text(
+                    'CHITO',
+                    style: TextStyle(
+                      color: _verdeEsmeralda,
+                      fontSize: 40,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 6,
                     ),
-                    child: const Text('INGRESAR', style: TextStyle(fontSize: 16)),
                   ),
-                ),
+                  const Text(
+                    'LIGA ROCA',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w300,
+                      letterSpacing: 4,
+                    ),
+                  ),
 
-                const SizedBox(height: 16),
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (context) => const RegistroScreen()),
-                    );
-                  },
-                  child: const Text('¿No tienes cuenta? Regístrate'),
-                ),
+                  const SizedBox(height: 40),
 
-                // BOTÓN DE RECUPERAR PASSWORD (PARTE DEL CAMBIO #4)
-                TextButton(
-                  onPressed: _mostrarDialogoRecuperarPassword,
-                  child: const Text('¿Olvidaste tu contraseña?',
-                      style: TextStyle(color: Colors.blueGrey)),
-                ),
+                  // --- INPUTS ---
+                  _buildInput(
+                    controller: _emailController,
+                    hint: 'CORREO ELECTRÓNICO',
+                    icon: Icons.email_outlined,
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+                  const SizedBox(height: 15),
+                  _buildInput(
+                    controller: _passwordController,
+                    hint: 'CONTRASEÑA',
+                    icon: Icons.lock_outline,
+                    isPassword: true,
+                  ),
 
-                const SizedBox(height: 40),
-                const Divider(),
-                TextButton.icon(
-                  onPressed: _contactarSoporte,
-                  icon: const Icon(Icons.help_outline, color: Colors.grey),
-                  label: const Text('¿Necesitas ayuda? Contáctanos', style: TextStyle(color: Colors.grey)),
-                ),
-              ],
+                  // --- BOTÓN RECUPERAR ---
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _resetPassword,
+                      child: Text(
+                        '¿Olvidaste tu contraseña?',
+                        style: TextStyle(color: _grisPlata, fontSize: 12),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 25),
+
+                  // --- BOTÓN ENTRAR ---
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _login,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _verdeEsmeralda,
+                        foregroundColor: Colors.black,
+                        elevation: 8,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                      ),
+                      child: _isLoading
+                          ? const CircularProgressIndicator(color: Colors.black)
+                          : const Text('INGRESAR', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // --- REGISTRO ---
+                  TextButton(
+                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RegistroScreen())),
+                    child: RichText(
+                      text: TextSpan(
+                        text: '¿NUEVO AQUÍ? ',
+                        style: TextStyle(color: _grisPlata, fontSize: 13),
+                        children: [
+                          TextSpan(
+                            text: 'REGÍSTRATE',
+                            style: TextStyle(color: _verdeEsmeralda, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInput({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    bool isPassword = false,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: _inputBackground,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: TextField(
+        controller: controller,
+        obscureText: isPassword ? _obscurePassword : false,
+        keyboardType: keyboardType,
+        style: const TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: const TextStyle(color: Color(0xFF95A5A6), fontSize: 12),
+          prefixIcon: Icon(icon, color: _grisPlata, size: 18),
+          suffixIcon: isPassword
+              ? IconButton(
+            icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, color: _grisPlata, size: 18),
+            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+          )
+              : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
         ),
       ),
     );

@@ -10,38 +10,39 @@ class FixtureList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final firestoreService = FirestoreService();
-    const Color verdeChito = Color(0xFF1A4D2E);
+    const Color verdeEsmeralda = Color(0xFF00C853);
+    const Color verdeMuyOscuro = Color(0xFF051209);
+    const Color cardColor = Color(0xFF1E272E);
 
     return StreamBuilder<List<Partido>>(
       stream: firestoreService.getPartidos(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator(color: verdeEsmeralda));
         final todos = snapshot.data!;
+        if (todos.isEmpty) return const Center(child: Text('No hay partidos.', style: TextStyle(color: Colors.white70)));
 
-        // Obtenemos todas las categorías únicas
         final categorias = todos.map((p) => p.categoria).toSet().toList()..sort();
 
-        if (todos.isEmpty) return const Center(child: Text('No hay partidos cargados.'));
-
         return DefaultTabController(
-          key: ValueKey(categorias.length),
           length: categorias.length,
           child: Column(
             children: [
-              TabBar(
-                isScrollable: true,
-                labelColor: verdeChito,
-                indicatorColor: verdeChito,
-                unselectedLabelColor: Colors.grey,
-                tabs: categorias.map((c) => Tab(text: c.toUpperCase())).toList(),
+              Container(
+                color: verdeMuyOscuro,
+                child: TabBar(
+                  isScrollable: true,
+                  labelColor: verdeEsmeralda,
+                  indicatorColor: verdeEsmeralda,
+                  unselectedLabelColor: Colors.white38,
+                  tabs: categorias.map((c) => Tab(text: c.toUpperCase())).toList(),
+                ),
               ),
               Expanded(
                 child: TabBarView(
                   children: categorias.map((cat) {
                     final filtrados = todos.where((p) => p.categoria == cat).toList()
                       ..sort((a, b) => b.numeroFecha.compareTo(a.numeroFecha));
-                    return _buildLista(filtrados, verdeChito);
+                    return _buildLista(filtrados, verdeEsmeralda, cardColor);
                   }).toList(),
                 ),
               ),
@@ -52,54 +53,54 @@ class FixtureList extends StatelessWidget {
     );
   }
 
-  Widget _buildLista(List<Partido> partidos, Color verdeChito) {
+  Widget _buildLista(List<Partido> partidos, Color verde, Color card) {
     final df = DateFormat('dd/MM HH:mm');
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.all(8),
       itemCount: partidos.length,
       itemBuilder: (context, index) {
         final p = partidos[index];
+        final bool enVivo = p.estado == EstadoPartido.jugando;
+        final bool mostrarRes = p.estado != EstadoPartido.pendiente;
+
         return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          elevation: 3,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          color: card,
+          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: enVivo ? verde : Colors.white.withOpacity(0.05), width: enVivo ? 2 : 1),
+          ),
           child: InkWell(
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PartidoDetalleScreen(partido: p))),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
               child: Row(
                 children: [
-                  _equipoCol(p.local.nombre, p.local.escudoUrl),
+                  _equipoCol(p.local.nombre, p.local.escudoUrl, enVivo),
                   Expanded(
                     child: Column(
                       children: [
-                        // AQUÍ SE QUITÓ EL 'const' QUE DABA ERROR
-                        Text(
-                            'JORNADA ${p.numeroFecha}',
-                            style: TextStyle(color: verdeChito, fontSize: 11, fontWeight: FontWeight.bold)
-                        ),
-                        const SizedBox(height: 5),
+                        if (enVivo)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(color: verde, borderRadius: BorderRadius.circular(4)),
+                            child: const Text('• EN VIVO', style: TextStyle(color: Colors.black, fontSize: 9, fontWeight: FontWeight.bold)),
+                          )
+                        else
+                          Text('FECHA ${p.numeroFecha}', style: TextStyle(color: verde, fontSize: 10, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 10),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                              color: p.finalizado ? verdeChito : Colors.grey[200],
-                              borderRadius: BorderRadius.circular(8)
-                          ),
-                          child: Text(
-                            p.estado == EstadoPartido.pendiente ? 'VS' : '${p.golesLocal} - ${p.golesVisitante}',
-                            style: TextStyle(
-                                color: p.finalizado ? Colors.white : Colors.black,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18
-                            ),
-                          ),
+                          decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(8), border: Border.all(color: mostrarRes ? verde : Colors.white10)),
+                          child: Text(mostrarRes ? '${p.golesLocal} - ${p.golesVisitante}' : 'VS',
+                              style: TextStyle(color: mostrarRes ? verde : Colors.white, fontWeight: FontWeight.w900, fontSize: 22)),
                         ),
-                        const SizedBox(height: 5),
-                        Text(df.format(p.fecha), style: TextStyle(color: Colors.grey[600], fontSize: 10)),
+                        const SizedBox(height: 8),
+                        Text(enVivo ? 'TIEMPO REAL' : df.format(p.fecha), style: TextStyle(color: enVivo ? verde : Colors.white38, fontSize: 10)),
                       ],
                     ),
                   ),
-                  _equipoCol(p.visitante.nombre, p.visitante.escudoUrl),
+                  _equipoCol(p.visitante.nombre, p.visitante.escudoUrl, enVivo),
                 ],
               ),
             ),
@@ -109,24 +110,15 @@ class FixtureList extends StatelessWidget {
     );
   }
 
-  Widget _equipoCol(String nombre, String url) {
+  Widget _equipoCol(String n, String u, bool ev) {
     return Expanded(
       child: Column(
         children: [
-          (url.isEmpty || url == 'null')
-              ? const Icon(Icons.shield, size: 45, color: Colors.grey)
-              : Image.network(
-            url,
-            height: 45, width: 45,
-            fit: BoxFit.contain,
-            errorBuilder: (_,__,___) => const Icon(Icons.shield, size: 45, color: Colors.grey),
-          ),
+          (u.isEmpty || u == 'null')
+              ? Icon(Icons.shield, size: 42, color: ev ? Colors.white38 : Colors.white12)
+              : Image.network(u, height: 45, width: 45, fit: BoxFit.contain, errorBuilder: (_,__,___) => const Icon(Icons.shield, size: 42, color: Colors.white12)),
           const SizedBox(height: 8),
-          Text(
-              nombre,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)
-          ),
+          Text(n, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.white)),
         ],
       ),
     );

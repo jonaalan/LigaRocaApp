@@ -7,7 +7,9 @@ import '../models/publicidad.dart';
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // --- EQUIPOS ---
+  // ===========================================================================
+  // EQUIPOS
+  // ===========================================================================
   Stream<List<Equipo>> getEquipos() {
     return _db.collection('equipos').snapshots().map((snapshot) {
       return snapshot.docs.map((doc) {
@@ -35,34 +37,9 @@ class FirestoreService {
     });
   }
 
-  // --- PUBLICIDAD ---
-  Stream<List<Publicidad>> getPublicidades() {
-    return _db.collection('publicidades').snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        return Publicidad(
-          id: doc.id,
-          imageUrl: data['imageUrl'] ?? '',
-          linkUrl: data['linkUrl'],
-          activa: data['activa'] ?? true,
-        );
-      }).toList();
-    });
-  }
-
-  Future<void> crearPublicidad(String imageUrl, String? linkUrl) async {
-    await _db.collection('publicidades').add({
-      'imageUrl': imageUrl,
-      'linkUrl': linkUrl,
-      'activa': true,
-    });
-  }
-
-  Future<void> borrarPublicidad(String id) async {
-    await _db.collection('publicidades').doc(id).delete();
-  }
-
-  // --- NOTICIAS ---
+  // ===========================================================================
+  // NOTICIAS
+  // ===========================================================================
   Stream<List<Noticia>> getNoticiasGenerales() {
     return _db
         .collection('noticias')
@@ -142,7 +119,9 @@ class FirestoreService {
     }).toList();
   }
 
-  // --- PARTIDOS ---
+  // ===========================================================================
+  // PARTIDOS
+  // ===========================================================================
   Stream<List<Partido>> getPartidos() {
     return _db.collection('partidos').orderBy('fecha').snapshots().map((snapshot) {
       return snapshot.docs.map((doc) {
@@ -152,103 +131,49 @@ class FirestoreService {
     });
   }
 
-  Future<void> iniciarPartido(String partidoId) async {
-    final doc = await _db.collection('partidos').doc(partidoId).get();
-    if (!doc.exists) return;
-    final data = doc.data()!;
-
-    await _db.collection('partidos').doc(partidoId).update({
-      'estado': EstadoPartido.jugando.toString(),
-      'tiempoInicio': FieldValue.serverTimestamp(),
-    });
-
-    final String localId = data['localId'] ?? '';
-    final String visitanteId = data['visitanteId'] ?? '';
-    final String msg = "${data['localNombre']} vs ${data['visitanteNombre']} (${data['categoria']})";
-
-    final noti = {
-      'titulo': '¡Empezó el partido!',
-      'mensaje': msg,
-      'fecha': FieldValue.serverTimestamp(),
-      'leida': false,
-      'partidoId': partidoId,
-    };
-
-    if (localId.isNotEmpty) await _db.collection('notificaciones').add({...noti, 'equipoId': localId});
-    if (visitanteId.isNotEmpty) await _db.collection('notificaciones').add({...noti, 'equipoId': visitanteId});
-  }
-
-  Future<void> finalizarPartido(String partidoId) async {
-    final doc = await _db.collection('partidos').doc(partidoId).get();
-    if (!doc.exists) return;
-    final data = doc.data()!;
-
-    await _db.collection('partidos').doc(partidoId).update({
-      'estado': EstadoPartido.finalizado.toString(),
-    });
-
-    final String msg = "Final: ${data['localNombre']} ${data['golesLocal']} - ${data['golesVisitante']} ${data['visitanteNombre']}";
-    final noti = {
-      'titulo': '¡Partido Finalizado!',
-      'mensaje': msg,
-      'fecha': FieldValue.serverTimestamp(),
-      'leida': false,
-      'partidoId': partidoId,
-    };
-
-    if (data['localId'] != null) await _db.collection('notificaciones').add({...noti, 'equipoId': data['localId']});
-    if (data['visitanteId'] != null) await _db.collection('notificaciones').add({...noti, 'equipoId': data['visitanteId']});
-  }
-
-  Future<void> borrarPartido(String id) async {
-    await _db.collection('partidos').doc(id).delete();
-  }
-
   Future<void> guardarFormacion(String partidoId, bool esLocal, List<JugadorFormacion> jugadores) async {
     final campo = esLocal ? 'formacionLocal' : 'formacionVisitante';
-    await _db.collection('partidos').doc(partidoId).update({campo: jugadores.map((j) => j.toMap()).toList()});
+    await _db.collection('partidos').doc(partidoId).update({
+      campo: jugadores.map((j) => j.toMap()).toList()
+    });
   }
 
   Future<void> agregarEvento(String partidoId, EventoPartido evento, bool esGolLocal, bool esGolVisitante) async {
+    // Esta función actualiza los goles en el documento del partido
     final docRef = _db.collection('partidos').doc(partidoId);
     await _db.runTransaction((transaction) async {
       final snapshot = await transaction.get(docRef);
       if (!snapshot.exists) return;
       final data = snapshot.data()!;
-      List<dynamic> eventos = data['eventos'] ?? [];
 
-      eventos.add({
-        'id': DateTime.now().millisecondsSinceEpoch.toString(),
-        'tipo': evento.tipo.toString(),
-        'minuto': evento.minuto,
-        'jugadorNombre': evento.jugadorNombre,
-        'camiseta': evento.camiseta,
-        'equipoId': evento.equipoId,
-      });
-
-      final updates = <String, dynamic>{'eventos': eventos};
+      final updates = <String, dynamic>{};
       if (esGolLocal) updates['golesLocal'] = (data['golesLocal'] ?? 0) + 1;
       if (esGolVisitante) updates['golesVisitante'] = (data['golesVisitante'] ?? 0) + 1;
-      transaction.update(docRef, updates);
 
-      String titulo = '';
-      if (evento.tipo == TipoEvento.gol) titulo = '¡GOL de ${evento.jugadorNombre}!';
-      else if (evento.tipo == TipoEvento.roja) titulo = 'Tarjeta ROJA: ${evento.jugadorNombre}';
-
-      if (titulo.isNotEmpty) {
-        await _db.collection('notificaciones').add({
-          'equipoId': evento.equipoId,
-          'titulo': titulo,
-          'mensaje': 'Minuto ${evento.minuto} - ${data['localNombre']} vs ${data['visitanteNombre']}',
-          'fecha': FieldValue.serverTimestamp(),
-          'leida': false,
-          'partidoId': partidoId,
-        });
-      }
+      if (updates.isNotEmpty) transaction.update(docRef, updates);
     });
   }
 
-  // --- NOTIFICACIONES ---
+  // ===========================================================================
+  // PUBLICIDADES
+  // ===========================================================================
+  Stream<List<Publicidad>> getPublicidades() {
+    return _db.collection('publicidades').snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return Publicidad(
+          id: doc.id,
+          imageUrl: data['imageUrl'] ?? '',
+          linkUrl: data['linkUrl'],
+          activa: data['activa'] ?? true,
+        );
+      }).toList();
+    });
+  }
+
+  // ===========================================================================
+  // NOTIFICACIONES
+  // ===========================================================================
   Stream<int> countNotificacionesSinLeer(String? equipoId) {
     var query = _db.collection('notificaciones').where('leida', isEqualTo: false);
     if (equipoId != null) query = query.where('equipoId', isEqualTo: equipoId);
@@ -257,10 +182,7 @@ class FirestoreService {
 
   Future<void> marcarNotificacionesComoLeidas(String? equipoId) async {
     var query = _db.collection('notificaciones').where('leida', isEqualTo: false);
-    if (equipoId != null) {
-      // CORRECCIÓN: Usar isEqualTo en la actualización
-      query = query.where('equipoId', isEqualTo: equipoId);
-    }
+    if (equipoId != null) query = query.where('equipoId', isEqualTo: equipoId);
     final docs = await query.get();
     for (var doc in docs.docs) {
       await doc.reference.update({'leida': true});

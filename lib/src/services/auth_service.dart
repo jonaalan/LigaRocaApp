@@ -13,7 +13,7 @@ class AuthService {
   // Obtener el modelo completo de Usuario (con rol)
   Future<Usuario?> getUsuarioActual() async {
     if (currentUser == null) return null;
-    
+
     try {
       DocumentSnapshot doc = await _db.collection('usuarios').doc(currentUser!.uid).get();
       if (doc.exists) {
@@ -65,7 +65,16 @@ class AuthService {
     await _auth.signOut();
   }
 
-  // Método legacy para compatibilidad (opcional, mejor usar getUsuarioActual)
+  // Recuperar Contraseña
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Método legacy para compatibilidad
   Future<Map<String, dynamic>?> getUserData() async {
     if (currentUser == null) return null;
     DocumentSnapshot doc = await _db.collection('usuarios').doc(currentUser!.uid).get();

@@ -1,274 +1,198 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../models/partido.dart';
 
-class PartidoDetalleScreen extends StatefulWidget {
+class PartidoDetalleScreen extends StatelessWidget {
   final Partido partido;
 
   const PartidoDetalleScreen({super.key, required this.partido});
 
   @override
-  State<PartidoDetalleScreen> createState() => _PartidoDetalleScreenState();
-}
-
-class _PartidoDetalleScreenState extends State<PartidoDetalleScreen> {
-  late Timer _timer;
-  String _tiempoTranscurrido = "00:00";
-
-  @override
-  void initState() {
-    super.initState();
-    _actualizarReloj();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) => _actualizarReloj());
-  }
-
-  @override
-  void dispose() {
-    _timer.cancel();
-    super.dispose();
-  }
-
-  void _actualizarReloj() {
-    if (widget.partido.estado == EstadoPartido.jugando && widget.partido.tiempoInicio != null) {
-      final duration = DateTime.now().difference(widget.partido.tiempoInicio!);
-      final minutos = duration.inMinutes;
-      final segundos = duration.inSeconds % 60;
-      if (mounted) {
-        setState(() {
-          _tiempoTranscurrido = '${minutos.toString().padLeft(2, '0')}:${segundos.toString().padLeft(2, '0')}';
-        });
-      }
-    } else if (widget.partido.estado == EstadoPartido.finalizado) {
-      if (mounted) setState(() => _tiempoTranscurrido = "Finalizado");
-    } else {
-      if (mounted) setState(() => _tiempoTranscurrido = "Pendiente");
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final eventosLocal = widget.partido.eventos.where((e) => e.equipoId == widget.partido.local.id).toList();
-    final eventosVisitante = widget.partido.eventos.where((e) => e.equipoId == widget.partido.visitante.id).toList();
+    // Formato de fecha: ej. lunes 04 de mayo - 13:24
+    final df = DateFormat('EEEE dd ' 'de' ' MMMM - HH:mm', 'es');
 
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Detalle del Partido'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'MINUTO A MINUTO'),
-              Tab(text: 'FORMACIONES'),
-            ],
+    // --- PALETA DARK ESMERALDA ---
+    const Color verdeEsmeralda = Color(0xFF00C853);
+    const Color negroProfundo = Color(0xFF000000);
+    const Color verdeMuyOscuro = Color(0xFF051209);
+    const Color cardColor = Color(0xFF1E272E);
+
+    return Scaffold(
+      backgroundColor: negroProfundo,
+      appBar: AppBar(
+        backgroundColor: verdeMuyOscuro,
+        elevation: 0,
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text(
+            'DETALLE DEL ENCUENTRO',
+            style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                letterSpacing: 1.5
+            )
+        ),
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [verdeMuyOscuro, negroProfundo],
           ),
         ),
-        body: Column(
-          children: [
-            // Marcador (Siempre visible)
-            Container(
-              padding: const EdgeInsets.all(20),
-              color: Colors.green[800],
-              child: Column(
-                children: [
-                  Text(
-                    _tiempoTranscurrido,
-                    style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _EquipoHeader(equipo: widget.partido.local, goles: widget.partido.golesLocal),
-                      const Text("-", style: TextStyle(color: Colors.white, fontSize: 40)),
-                      _EquipoHeader(equipo: widget.partido.visitante, goles: widget.partido.golesVisitante),
-                    ],
-                  ),
-                ],
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              // --- CABECERA: MARCADOR ---
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+                decoration: BoxDecoration(
+                  color: cardColor,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.white.withOpacity(0.05)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _equipoDetalle(partido.local.nombre, partido.local.escudoUrl),
+                    Column(
+                      children: [
+                        Text(
+                          partido.finalizado ? 'FINALIZADO' : 'EN CURSO',
+                          style: TextStyle(
+                              color: partido.finalizado ? verdeEsmeralda : Colors.orangeAccent,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.5
+                          ),
+                        ),
+                        const SizedBox(height: 15),
+                        Text(
+                          partido.estado == EstadoPartido.pendiente
+                              ? 'VS'
+                              : '${partido.golesLocal} - ${partido.golesVisitante}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 48,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
+                    _equipoDetalle(partido.visitante.nombre, partido.visitante.escudoUrl),
+                  ],
+                ),
               ),
-            ),
-            
-            // Contenido de Pestañas
-            Expanded(
-              child: TabBarView(
-                children: [
-                  // Pestaña 1: Minuto a Minuto
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: eventosLocal.length,
-                          itemBuilder: (context, index) => _EventoItem(evento: eventosLocal[index], esLocal: true),
-                        ),
-                      ),
-                      Container(width: 1, color: Colors.grey[300]),
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: eventosVisitante.length,
-                          itemBuilder: (context, index) => _EventoItem(evento: eventosVisitante[index], esLocal: false),
-                        ),
-                      ),
-                    ],
-                  ),
 
-                  // Pestaña 2: Formaciones
-                  Row(
-                    children: [
-                      // Formación Local
-                      Expanded(
-                        child: Column(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text(widget.partido.local.nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            ),
-                            Expanded(
-                              child: ListView.builder(
-                                itemCount: widget.partido.formacionLocal.length,
-                                itemBuilder: (context, index) {
-                                  final jugador = widget.partido.formacionLocal[index];
-                                  return ListTile(
-                                    dense: true,
-                                    leading: CircleAvatar(
-                                      radius: 12,
-                                      backgroundColor: jugador.esTitular ? Colors.blue : Colors.grey,
-                                      child: Text(jugador.camiseta.toString(), style: const TextStyle(fontSize: 10, color: Colors.white)),
-                                    ),
-                                    title: Text(jugador.nombre, style: const TextStyle(fontSize: 12)),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const VerticalDivider(),
-                      // Formación Visitante
-                      Expanded(
-                        child: Column(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text(widget.partido.visitante.nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            ),
-                            Expanded(
-                              child: ListView.builder(
-                                itemCount: widget.partido.formacionVisitante.length,
-                                itemBuilder: (context, index) {
-                                  final jugador = widget.partido.formacionVisitante[index];
-                                  return ListTile(
-                                    dense: true,
-                                    leading: CircleAvatar(
-                                      radius: 12,
-                                      backgroundColor: jugador.esTitular ? Colors.red : Colors.grey,
-                                      child: Text(jugador.camiseta.toString(), style: const TextStyle(fontSize: 10, color: Colors.white)),
-                                    ),
-                                    title: Text(jugador.nombre, style: const TextStyle(fontSize: 12)),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+              const SizedBox(height: 30),
+
+              // --- INFORMACIÓN DEL PARTIDO ---
+              _buildInfoCard(
+                titulo: 'INFORMACIÓN DE LA JORNADA',
+                cardColor: cardColor,
+                verdeEsmeralda: verdeEsmeralda,
+                items: [
+                  _infoItem(Icons.calendar_month, 'Fecha', 'Jornada ${partido.numeroFecha}'),
+                  _infoItem(Icons.access_time, 'Horario', df.format(partido.fecha)),
+                  _infoItem(Icons.emoji_events, 'Categoría', partido.categoria.toUpperCase()),
                 ],
               ),
-            ),
-          ],
+
+              const SizedBox(height: 100),
+            ],
+          ),
         ),
       ),
     );
   }
-}
 
-class _EquipoHeader extends StatelessWidget {
-  final dynamic equipo;
-  final int goles;
-
-  const _EquipoHeader({required this.equipo, required this.goles});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(equipo.nombre, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        Text(goles.toString(), style: const TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.bold)),
-      ],
+  Widget _equipoDetalle(String nombre, String url) {
+    return Expanded(
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+                color: Colors.black26,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white.withOpacity(0.05))
+            ),
+            child: (url.isEmpty || url == 'null')
+                ? const Icon(Icons.shield, size: 60, color: Colors.white12)
+                : Image.network(
+              url,
+              height: 70, width: 70,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const Icon(Icons.shield, size: 60, color: Colors.white12),
+            ),
+          ),
+          const SizedBox(height: 15),
+          Text(
+            nombre.toUpperCase(),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
     );
   }
-}
 
-class _EventoItem extends StatelessWidget {
-  final EventoPartido evento;
-  final bool esLocal;
-
-  const _EventoItem({required this.evento, required this.esLocal});
-
-  @override
-  Widget build(BuildContext context) {
-    IconData icon;
-    Color color;
-    
-    switch (evento.tipo) {
-      case TipoEvento.gol:
-        icon = Icons.sports_soccer;
-        color = Colors.black;
-        break;
-      case TipoEvento.amarilla:
-        icon = Icons.style;
-        color = Colors.yellow[700]!;
-        break;
-      case TipoEvento.roja:
-        icon = Icons.style;
-        color = Colors.red;
-        break;
-      case TipoEvento.cambio:
-        icon = Icons.compare_arrows;
-        color = Colors.blue;
-        break;
-    }
-
-    return Card(
-      margin: const EdgeInsets.all(4),
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          crossAxisAlignment: esLocal ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: esLocal ? MainAxisAlignment.end : MainAxisAlignment.start,
-              children: [
-                if (!esLocal) Icon(icon, color: color, size: 20),
-                if (!esLocal) const SizedBox(width: 4),
-                Text("${evento.minuto}'", style: const TextStyle(fontWeight: FontWeight.bold)),
-                if (esLocal) const SizedBox(width: 4),
-                if (esLocal) Icon(icon, color: color, size: 20),
-              ],
+  Widget _buildInfoCard({
+    required String titulo,
+    required Color cardColor,
+    required Color verdeEsmeralda,
+    required List<Widget> items
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            titulo,
+            style: TextStyle(
+                color: verdeEsmeralda,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2
             ),
-            
-            if (evento.tipo == TipoEvento.cambio) ...[
-              Row(
-                mainAxisAlignment: esLocal ? MainAxisAlignment.end : MainAxisAlignment.start,
-                children: [
-                  const Icon(Icons.arrow_upward, size: 12, color: Colors.green),
-                  Text(" ${evento.jugadorNombre} (${evento.camiseta})", style: const TextStyle(fontSize: 12)),
-                ],
-              ),
-              if (evento.jugadorSale != null)
-                Row(
-                  mainAxisAlignment: esLocal ? MainAxisAlignment.end : MainAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.arrow_downward, size: 12, color: Colors.red),
-                    Text(" ${evento.jugadorSale} (${evento.camisetaSale})", style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                  ],
-                ),
-            ] else ...[
-              Text(evento.jugadorNombre, style: const TextStyle(fontSize: 12)),
-              Text("Camiseta ${evento.camiseta}", style: const TextStyle(fontSize: 10, color: Colors.grey)),
+          ),
+          const SizedBox(height: 20),
+          ...items,
+        ],
+      ),
+    );
+  }
+
+  Widget _infoItem(IconData icono, String label, String valor) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        children: [
+          Icon(icono, size: 20, color: Colors.white38),
+          const SizedBox(width: 15),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: const TextStyle(color: Colors.white38, fontSize: 11)),
+              Text(valor, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
             ],
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

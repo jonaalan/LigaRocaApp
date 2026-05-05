@@ -1,132 +1,193 @@
 import 'package:flutter/material.dart';
-import '../models/partido.dart';
 import '../models/equipo.dart';
+import '../models/partido.dart';
 import '../services/firestore_service.dart';
 
-class TablaPosicionesScreen extends StatelessWidget {
+class TablaPosicionesScreen extends StatefulWidget {
   const TablaPosicionesScreen({super.key});
 
   @override
+  State<TablaPosicionesScreen> createState() => _TablaPosicionesScreenState();
+}
+
+class _TablaPosicionesScreenState extends State<TablaPosicionesScreen> {
+  final FirestoreService _firestoreService = FirestoreService();
+
+  // --- PALETA DARK ESMERALDA (Cambiado de const a final) ---
+  final Color verdeEsmeralda = const Color(0xFF00C853);
+  final Color negroProfundo = const Color(0xFF000000);
+  final Color verdeMuyOscuro = const Color(0xFF051209);
+  final Color cardColor = const Color(0xFF1E272E);
+
+  @override
   Widget build(BuildContext context) {
-    final firestoreService = FirestoreService();
+    return StreamBuilder<List<Partido>>(
+      stream: _firestoreService.getPartidos(),
+      builder: (context, snapshotPartidos) {
+        return StreamBuilder<List<Equipo>>(
+          stream: _firestoreService.getEquipos(),
+          builder: (context, snapshotEquipos) {
+            if (!snapshotPartidos.hasData || !snapshotEquipos.hasData) {
+              // QUITADO 'const' porque usa una variable final
+              return Center(child: CircularProgressIndicator(color: verdeEsmeralda));
+            }
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Tabla de Posiciones')),
-      body: StreamBuilder<List<Partido>>(
-        stream: firestoreService.getPartidos(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}'));
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+            final partidos = snapshotPartidos.data!;
+            final equipos = snapshotEquipos.data!;
 
-          final partidos = snapshot.data!;
-          final tabla = _calcularTabla(partidos);
+            final categorias = partidos.map((p) => p.categoria).toSet().toList()..sort();
 
-          // CAMBIO NÚMERO 2: Se agrega Scroll Vertical rodeando al Horizontal
-          return SingleChildScrollView(
-            scrollDirection: Axis.vertical, // <--- ESTO PERMITE BAJAR
-            physics: const BouncingScrollPhysics(),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal, // <--- ESTO PERMITE MOVER A LOS LADOS
-              child: DataTable(
-                columns: const [
-                  DataColumn(label: Text('Equipo')),
-                  DataColumn(label: Text('Pts', style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text('PJ')),
-                  DataColumn(label: Text('PG')),
-                  DataColumn(label: Text('PE')),
-                  DataColumn(label: Text('PP')),
-                  DataColumn(label: Text('GF')),
-                  DataColumn(label: Text('GC')),
-                  DataColumn(label: Text('DG')),
+            if (categorias.isEmpty) {
+              return const Center(child: Text("No hay partidos para calcular posiciones", style: TextStyle(color: Colors.white54)));
+            }
+
+            return DefaultTabController(
+              length: categorias.length,
+              child: Column(
+                children: [
+                  Container(
+                    color: verdeMuyOscuro,
+                    child: TabBar(
+                      isScrollable: true,
+                      labelColor: verdeEsmeralda,
+                      unselectedLabelColor: Colors.white38,
+                      indicatorColor: verdeEsmeralda,
+                      tabs: categorias.map((c) => Tab(text: c.toUpperCase())).toList(),
+                    ),
+                  ),
+                  Expanded(
+                    child: TabBarView(
+                      children: categorias.map((cat) {
+                        final tabla = _calcularTablaPorCategoria(equipos, partidos, cat);
+
+                        return RefreshIndicator(
+                          onRefresh: () async => setState(() {}),
+                          color: verdeEsmeralda,
+                          child: _buildTabla(tabla),
+                        );
+                      }).toList(),
+                    ),
+                  ),
                 ],
-                rows: tabla.map((fila) {
-                  return DataRow(cells: [
-                    DataCell(Row(
-                      children: [
-                        if (fila.equipo.escudoUrl.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8.0),
-                            child: Image.network(fila.equipo.escudoUrl, width: 20, height: 20),
-                          ),
-                        Text(fila.equipo.nombre),
-                      ],
-                    )),
-                    DataCell(Text(fila.puntos.toString(), style: const TextStyle(fontWeight: FontWeight.bold))),
-                    DataCell(Text(fila.pj.toString())),
-                    DataCell(Text(fila.pg.toString())),
-                    DataCell(Text(fila.pe.toString())),
-                    DataCell(Text(fila.pp.toString())),
-                    DataCell(Text(fila.gf.toString())),
-                    DataCell(Text(fila.gc.toString())),
-                    DataCell(Text(fila.dg.toString())),
-                  ]);
-                }).toList(),
               ),
-            ),
-          );
-        },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildTabla(List<Map<String, dynamic>> tabla) {
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      scrollDirection: Axis.vertical,
+      padding: const EdgeInsets.all(12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withOpacity(0.05)),
+        ),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: DataTable(
+            columnSpacing: 20,
+            horizontalMargin: 15,
+            columns: [
+              _col('#', numeric: false),
+              _col('EQUIPO', numeric: false),
+              _col('PJ'),
+              _col('DG'),
+              _col('PTS', isEsmeralda: true),
+            ],
+            rows: tabla.asMap().entries.map((entry) {
+              final index = entry.key;
+              final item = entry.value;
+              return DataRow(
+                cells: [
+                  DataCell(Text('${index + 1}', style: const TextStyle(color: Colors.white38, fontSize: 12))),
+                  DataCell(
+                    Row(
+                      children: [
+                        if (item['escudoUrl'] != null && item['escudoUrl'].isNotEmpty)
+                          Image.network(item['escudoUrl'], width: 24, height: 24,
+                              errorBuilder: (_,__,___)=> const Icon(Icons.shield, size: 24, color: Colors.white10))
+                        else
+                          const Icon(Icons.shield, size: 24, color: Colors.white10),
+                        const SizedBox(width: 10),
+                        Text(item['nombre'], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                  DataCell(Text('${item['pj']}', style: const TextStyle(color: Colors.white70))),
+                  DataCell(Text('${item['dg']}', style: TextStyle(
+                      color: item['dg'] > 0 ? Colors.blueAccent : (item['dg'] < 0 ? Colors.redAccent : Colors.white38)
+                  ))),
+                  // QUITADO 'const' del TextStyle
+                  DataCell(Text('${item['pts']}', style: TextStyle(color: verdeEsmeralda, fontWeight: FontWeight.bold, fontSize: 16))),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
       ),
     );
   }
 
-  // --- LA LÓGICA SIGUIENTE NO SE TOCA (REGLA DE ORO) ---
-  List<_FilaTabla> _calcularTabla(List<Partido> partidos) {
-    final Map<String, _FilaTabla> tabla = {};
+  DataColumn _col(String label, {bool numeric = true, bool isEsmeralda = false}) {
+    return DataColumn(
+      numeric: numeric,
+      label: Text(label, style: TextStyle(
+        color: isEsmeralda ? verdeEsmeralda : Colors.white54,
+        fontWeight: FontWeight.bold,
+        fontSize: 12,
+      )),
+    );
+  }
 
-    for (var partido in partidos) {
-      if (partido.estado != EstadoPartido.finalizado) continue;
+  List<Map<String, dynamic>> _calcularTablaPorCategoria(List<Equipo> equipos, List<Partido> partidos, String categoria) {
+    List<Map<String, dynamic>> lista = [];
 
-      tabla.putIfAbsent(partido.local.id, () => _FilaTabla(partido.local));
-      tabla.putIfAbsent(partido.visitante.id, () => _FilaTabla(partido.visitante));
+    for (var e in equipos) {
+      int pj = 0, pts = 0, gf = 0, gc = 0;
+      bool jugoEnCategoria = false;
 
-      final local = tabla[partido.local.id]!;
-      final visitante = tabla[partido.visitante.id]!;
+      for (var p in partidos) {
+        if (!p.finalizado || p.categoria != categoria) continue;
 
-      local.pj++;
-      visitante.pj++;
-      local.gf += partido.golesLocal;
-      local.gc += partido.golesVisitante;
-      visitante.gf += partido.golesVisitante;
-      visitante.gc += partido.golesLocal;
+        if (p.local.nombre == e.nombre) {
+          jugoEnCategoria = true;
+          pj++;
+          gf += p.golesLocal;
+          gc += p.golesVisitante;
+          if (p.golesLocal > p.golesVisitante) pts += 3;
+          else if (p.golesLocal == p.golesVisitante) pts += 1;
+        } else if (p.visitante.nombre == e.nombre) {
+          jugoEnCategoria = true;
+          pj++;
+          gf += p.golesVisitante;
+          gc += p.golesLocal;
+          if (p.golesVisitante > p.golesLocal) pts += 3;
+          else if (p.golesLocal == p.golesVisitante) pts += 1;
+        }
+      }
 
-      if (partido.golesLocal > partido.golesVisitante) {
-        local.pg++;
-        local.puntos += 3;
-        visitante.pp++;
-      } else if (partido.golesLocal < partido.golesVisitante) {
-        visitante.pg++;
-        visitante.puntos += 3;
-        local.pp++;
-      } else {
-        local.pe++;
-        local.puntos += 1;
-        visitante.pe++;
-        visitante.puntos += 1;
+      if (jugoEnCategoria) {
+        lista.add({
+          'nombre': e.nombre,
+          'escudoUrl': e.escudoUrl,
+          'pj': pj,
+          'dg': gf - gc,
+          'pts': pts,
+        });
       }
     }
 
-    final lista = tabla.values.toList();
     lista.sort((a, b) {
-      if (b.puntos != a.puntos) return b.puntos.compareTo(a.puntos);
-      if (b.dg != a.dg) return b.dg.compareTo(a.dg);
-      return b.gf.compareTo(a.gf);
+      int cmp = b['pts'].compareTo(a['pts']);
+      if (cmp == 0) return b['dg'].compareTo(a['dg']);
+      return cmp;
     });
-
     return lista;
   }
-}
-
-class _FilaTabla {
-  final Equipo equipo;
-  int puntos = 0;
-  int pj = 0;
-  int pg = 0;
-  int pe = 0;
-  int pp = 0;
-  int gf = 0;
-  int gc = 0;
-
-  _FilaTabla(this.equipo);
-
-  int get dg => gf - gc;
 }
