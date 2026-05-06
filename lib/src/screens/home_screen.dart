@@ -145,7 +145,8 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_none, color: Colors.white),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificacionesScreen())),
+            // Busca esta línea y QUITA la palabra 'const' antes de NotificacionesScreen()
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => NotificacionesScreen())),
           ),
           if (_isAdmin)
             IconButton(

@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../services/firestore_service.dart';
+import '../../models/partido.dart';
 
 class AdminControlPartidoScreen extends StatelessWidget {
   final String partidoId;
   final String equipoLocal;
   final String equipoVisitante;
 
-  const AdminControlPartidoScreen({
+  final FirestoreService _firestoreService = FirestoreService();
+
+  AdminControlPartidoScreen({
     super.key,
     required this.partidoId,
     required this.equipoLocal,
@@ -50,16 +54,33 @@ class AdminControlPartidoScreen extends StatelessWidget {
                 child: ListView(
                   padding: const EdgeInsets.all(20),
                   children: [
-                    // REGLA DE ORO: Actualiza el marcador para que el usuario lo vea en vivo
-                    _buildBtn(context, "GOL $equipoLocal", () => _update(partidoId, 'golesLocal', gL + 1), verdeEsmeralda),
+                    _buildBtn(context, "GOL $equipoLocal", () {
+                      _firestoreService.agregarEvento(
+                          partidoId,
+                          EventoPartido(id: '', tipo: TipoEvento.gol, minuto: 0, jugadorNombre: '', camiseta: 0, equipoId: ''),
+                          true,
+                          false
+                      );
+                    }, verdeEsmeralda),
+
                     const SizedBox(height: 10),
-                    _buildBtn(context, "GOL $equipoVisitante", () => _update(partidoId, 'golesVisitante', gV + 1), verdeEsmeralda),
+
+                    _buildBtn(context, "GOL $equipoVisitante", () {
+                      _firestoreService.agregarEvento(
+                          partidoId,
+                          EventoPartido(id: '', tipo: TipoEvento.gol, minuto: 0, jugadorNombre: '', camiseta: 0, equipoId: ''),
+                          false,
+                          true
+                      );
+                    }, verdeEsmeralda),
+
                     const Divider(height: 40, color: Colors.white10),
+
                     Row(
                       children: [
-                        Expanded(child: _buildBtnMin("Quitar Local", () => _update(partidoId, 'golesLocal', gL > 0 ? gL - 1 : 0))),
+                        Expanded(child: _buildBtnMin("Quitar Local", () => _updateSimple(partidoId, 'golesLocal', gL > 0 ? gL - 1 : 0))),
                         const SizedBox(width: 10),
-                        Expanded(child: _buildBtnMin("Quitar Vis.", () => _update(partidoId, 'golesVisitante', gV > 0 ? gV - 1 : 0))),
+                        Expanded(child: _buildBtnMin("Quitar Vis.", () => _updateSimple(partidoId, 'golesVisitante', gV > 0 ? gV - 1 : 0))),
                       ],
                     )
                   ],
@@ -72,7 +93,7 @@ class AdminControlPartidoScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _update(String id, String campo, int val) async {
+  Future<void> _updateSimple(String id, String campo, int val) async {
     await FirebaseFirestore.instance.collection('partidos').doc(id).update({campo: val});
   }
 
@@ -84,10 +105,25 @@ class AdminControlPartidoScreen extends StatelessWidget {
   }
 
   Widget _buildBtn(BuildContext c, String t, VoidCallback o, Color v) {
-    return ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: v, foregroundColor: Colors.black, minimumSize: const Size(double.infinity, 55)), onPressed: o, child: Text(t, style: const TextStyle(fontWeight: FontWeight.bold)));
+    return ElevatedButton(
+        style: ElevatedButton.styleFrom(
+            backgroundColor: v,
+            foregroundColor: Colors.black,
+            minimumSize: const Size(double.infinity, 55)
+        ),
+        onPressed: o,
+        child: Text(t, style: const TextStyle(fontWeight: FontWeight.bold))
+    );
   }
 
   Widget _buildBtnMin(String t, VoidCallback o) {
-    return OutlinedButton(style: OutlinedButton.styleFrom(foregroundColor: Colors.white38, side: const BorderSide(color: Colors.white10)), onPressed: o, child: Text(t, style: const TextStyle(fontSize: 10)));
+    return OutlinedButton(
+        style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.white38,
+            side: const BorderSide(color: Colors.white10)
+        ),
+        onPressed: o,
+        child: Text(t, style: const TextStyle(fontSize: 10))
+    );
   }
 }

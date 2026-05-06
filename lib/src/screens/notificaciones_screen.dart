@@ -1,33 +1,30 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
+import '../services/firestore_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'partido_detalle_screen.dart';
 
 class NotificacionesScreen extends StatefulWidget {
-  const NotificacionesScreen({super.key});
+  NotificacionesScreen({super.key});
 
   @override
-  State<NotificacionesScreen> createState() => _NotificacionesScreenState();
+  _NotificacionesScreenState createState() => _NotificacionesScreenState();
 }
 
 class _NotificacionesScreenState extends State<NotificacionesScreen> {
-  final Color verdeEsmeralda = const Color(0xFF00C853);
+  final FirestoreService _fs = FirestoreService();
+  String? miEquipoId;
 
   @override
-  void dispose() {
-    // REGLA DE ORO: Al salir de la pantalla, marcamos todas como leídas
-    _marcarTodasComoVistas();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _loadMiEquipo();
   }
 
-  Future<void> _marcarTodasComoVistas() async {
-    var query = await FirebaseFirestore.instance
-        .collection('notificaciones')
-        .where('visto', isEqualTo: false)
-        .get();
-
-    for (var doc in query.docs) {
-      await doc.reference.update({'visto': true});
-    }
+  _loadMiEquipo() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      miEquipoId = prefs.getString('equipoId');
+    });
   }
 
   @override
@@ -35,66 +32,59 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text('CENTRO DE NOTIFICACIONES',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1)),
+        title: const Text("NOTIFICACIONES", style: TextStyle(fontSize: 16)),
         backgroundColor: const Color(0xFF051209),
-        centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.delete_sweep, color: Colors.white38),
-            onPressed: () => _limpiarHistorial(),
+            icon: const Icon(Icons.delete_sweep, color: Colors.redAccent),
+            onPressed: () => _fs.borrarTodasLasNotificaciones(),
           )
         ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        // Solo mostramos las que NO han sido vistas (visto == false)
-        stream: FirebaseFirestore.instance
-            .collection('notificaciones')
-            .where('visto', isEqualTo: false)
-            .orderBy('fecha', descending: true)
-            .snapshots(),
+      body: StreamBuilder<List<Map<String, dynamic>>>(
+        stream: _fs.getNotificacionesList(miEquipoId),
         builder: (context, snapshot) {
           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          final notifs = snapshot.data!;
 
-          final docs = snapshot.data!.docs;
-
-          if (docs.isEmpty) {
-            return const Center(
-              child: Text("NO TIENES NOTIFICACIONES NUEVAS",
-                  style: TextStyle(color: Colors.white24, fontSize: 12, fontWeight: FontWeight.bold)),
-            );
+          if (notifs.isEmpty) {
+            return const Center(child: Text("No tienes notificaciones", style: TextStyle(color: Colors.white54)));
           }
 
           return ListView.builder(
-            padding: const EdgeInsets.all(15),
-            itemCount: docs.length,
+            itemCount: notifs.length,
             itemBuilder: (context, index) {
-              var n = docs[index].data() as Map<String, dynamic>;
-              DateTime fecha = (n['fecha'] as Timestamp).toDate();
+              final n = notifs[index];
+              bool esMiEquipo = n['equipoId'] == miEquipoId;
 
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1E272E),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: verdeEsmeralda.withOpacity(0.3)),
-                ),
+              return Card(
+                color: esMiEquipo ? Colors.green.withOpacity(0.1) : const Color(0xFF121212),
+                margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: verdeEsmeralda.withOpacity(0.1),
-                    child: Icon(Icons.notifications_active, color: verdeEsmeralda, size: 20),
+                  leading: Icon(
+                      Icons.sports_soccer,
+                      color: esMiEquipo ? Colors.green : Colors.white24
                   ),
-                  title: Text(n['titulo'],
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 5),
-                      Text(n['mensaje'], style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                      const SizedBox(height: 5),
-                      Text(DateFormat('HH:mm').format(fecha), style: const TextStyle(color: Colors.white24, fontSize: 10)),
-                    ],
+                  title: Text(
+                    esMiEquipo ? "¡GOL DE TU EQUIPO! 🏆" : n['titulo'],
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: esMiEquipo ? FontWeight.bold : FontWeight.normal
+                    ),
                   ),
+                  subtitle: Text(n['mensaje'], style: const TextStyle(color: Colors.white70)),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.white24),
+                  onTap: () {
+                    if (n['partidoId'] != null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          // Pasamos el partidoId a la pantalla de detalle
+                          builder: (context) => PartidoDetalleScreen(partidoId: n['partidoId']),
+                        ),
+                      );
+                    }
+                  },
                 ),
               );
             },
@@ -102,12 +92,5 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
         },
       ),
     );
-  }
-
-  void _limpiarHistorial() async {
-    var query = await FirebaseFirestore.instance.collection('notificaciones').get();
-    for (var doc in query.docs) {
-      await doc.reference.delete();
-    }
   }
 }
