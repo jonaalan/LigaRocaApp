@@ -9,7 +9,6 @@ plugins {
     id("com.google.gms.google-services")
 }
 
-// --- CONFIGURACIÓN DE LA FIRMA PARA LA TIENDA ---
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 if (keystorePropertiesFile.exists()) {
@@ -17,38 +16,33 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    // Tu identificador único
     namespace = "chito.liga_roca"
 
-    // REGLA DE ORO: Actualizado a 36 como piden share_plus y url_launcher
+    // CORRECCIÓN 1: Subimos el Compile SDK al 36 como pidió la terminal
     compileSdk = 36
 
-    // Mantenemos la versión del NDK que solucionó el error anterior
+    // CORRECCIÓN 2: Actualizamos la versión del NDK a la 28.2.13676358
     ndkVersion = "28.2.13676358"
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
 
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = "1.8"
     }
 
     defaultConfig {
         applicationId = "chito.liga_roca"
-
-        // minSdk 24 es ideal para cubrir el 95% de los teléfonos actuales
         minSdk = 24
 
-        // REGLA DE ORO: targetSdk también en 36 para cumplir con Google Play 2026
+        // CORRECCIÓN 3: Subimos el targetSdk al 36
         targetSdk = 36
 
-        // ¡OJO! Para subir a la tienda por primera vez usas estos.
-        // La próxima vez que actualices la app, subí el versionCode a 2.
         versionCode = 1
         versionName = "1.0.0"
-
         multiDexEnabled = true
     }
 
@@ -63,13 +57,9 @@ android {
 
     buildTypes {
         getByName("release") {
-            // Firmamos la app para que la tienda la acepte
             signingConfig = signingConfigs.getByName("release")
-
-            // Estos se quedan en false para evitar problemas en la primera subida
             isMinifyEnabled = false
             isShrinkResources = false
-
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -78,7 +68,6 @@ android {
     }
 }
 
-// Resolución de conflictos de librerías para estabilidad total
 configurations.all {
     resolutionStrategy {
         force("androidx.browser:browser:1.8.0")
@@ -89,6 +78,9 @@ configurations.all {
 
 dependencies {
     implementation("androidx.multidex:multidex:2.0.1")
+
+    // CORRECCIÓN 4: Subimos la versión de desugar a la 2.1.4 como pidió el error
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
 
 flutter {

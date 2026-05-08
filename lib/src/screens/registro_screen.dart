@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../models/equipo.dart';
 import '../services/equipo_service.dart';
+import '../services/firestore_service.dart'; // 1. IMPORTAMOS EL SERVICIO
 
 class RegistroScreen extends StatefulWidget {
   const RegistroScreen({super.key});
@@ -13,6 +14,8 @@ class RegistroScreen extends StatefulWidget {
 class _RegistroScreenState extends State<RegistroScreen> {
   final AuthService _authService = AuthService();
   final EquipoService _equipoService = EquipoService();
+  final FirestoreService _firestoreService = FirestoreService(); // 2. INSTANCIAMOS EL SERVICIO
+
   final TextEditingController _nombreController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -88,19 +91,33 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(backgroundColor: _verdeEsmeralda, foregroundColor: Colors.black, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25))),
                     onPressed: _isLoading ? null : () async {
+                      if (_equipoSeleccionado == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Por favor, selecciona tu equipo favorito')));
+                        return;
+                      }
+
                       setState(() => _isLoading = true);
                       try {
+                        // 1. REGISTRO EN FIREBASE AUTH
                         await _authService.registrarUsuario(
                           email: _emailController.text.trim(),
                           password: _passwordController.text.trim(),
                           nombre: _nombreController.text.trim(),
                           equipoFavorito: _equipoSeleccionado!,
                         );
-                        Navigator.pop(context);
+
+                        // 3. SUSCRIPCIÓN AUTOMÁTICA AL TÓPICO DEL EQUIPO (BOLSILLO)
+                        await _firestoreService.suscribirAEquipo(_equipoSeleccionado!.id);
+
+                        print("✅ Hincha registrado y suscrito a: equipo_${_equipoSeleccionado!.id}");
+
+                        if (mounted) {
+                          Navigator.pop(context);
+                        }
                       } catch (e) {
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
                       } finally {
-                        setState(() => _isLoading = false);
+                        if (mounted) setState(() => _isLoading = false);
                       }
                     },
                     child: _isLoading ? const CircularProgressIndicator(color: Colors.black) : const Text('REGISTRARME', style: TextStyle(fontWeight: FontWeight.bold)),

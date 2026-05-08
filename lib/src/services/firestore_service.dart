@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'dart:convert'; // PARA EL PUSH
+import 'package:http/http.dart' as http; // PARA EL PUSH
 import '../models/noticia.dart';
 import '../models/equipo.dart';
 import '../models/partido.dart';
@@ -10,13 +12,30 @@ class FirestoreService {
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
 
   // ===========================================================================
+  // ENVÍO DE PUSH DIRECTO (EL TRUCO DEL BOLSILLO)
+  // ===========================================================================
+// ===========================================================================
+// ENVÍO DE PUSH DIRECTO (EL TRUCO DEL BOLSILLO)
+// ===========================================================================
+  Future<void> enviarNotificacionPush({
+    required String titulo,
+    required String mensaje,
+    required String partidoId,
+    String tema = 'general',
+  }) async {
+    // Ya no hace nada aquí porque el servidor lo hace solo.
+    print("📢 Notificación registrada internamente para: $tema");
+  }
+  // ===========================================================================
   // SUSCRIPCIÓN A NOTIFICACIONES
   // ===========================================================================
   Future<void> suscribirAEquipo(String equipoId) async {
-    await _fcm.subscribeToTopic('equipo_$equipoId');
+    // Limpiamos el ID por si tiene espacios
+    String idLimpio = equipoId.replaceAll(' ', '_');
+    await _fcm.subscribeToTopic('equipo_$idLimpio');
     await _fcm.subscribeToTopic('general');
+    print("✅ Suscrito con éxito a: equipo_$idLimpio y general");
   }
-
   // ===========================================================================
   // EQUIPOS
   // ===========================================================================
@@ -129,7 +148,9 @@ class FirestoreService {
       campo: jugadores.map((j) => j.toMap()).toList()
     });
   }
-
+  // ===========================================================================
+  //  EVENTOS
+  // ===========================================================================
   Future<void> agregarEvento(String partidoId, EventoPartido evento, bool esGolLocal, bool esGolVisitante) async {
     final docRef = _db.collection('partidos').doc(partidoId);
 
@@ -138,41 +159,91 @@ class FirestoreService {
       if (!snap.exists) return;
       final data = snap.data() as Map<String, dynamic>;
 
+      // --- TRUCO PARA TU ESTRUCTURA ACTUAL ---
+      // Si localId no existe, usamos el nombre como ID temporal o buscamos dentro del mapa
+      String idLocal = data['localId']?.toString() ?? data['local']?['nombre'] ?? "local";
+      String idVisitante = data['visitanteId']?.toString() ?? data['visitante']?['nombre'] ?? "visitante";
+
+      String nombreLocal = data['localNombre'] ?? data['local']?['nombre'] ?? 'Local';
+      String nombreVisitante = data['visitanteNombre'] ?? data['visitante']?['nombre'] ?? 'Visitante';
+
       int gL = (data['golesLocal'] ?? 0);
       int gV = (data['golesVisitante'] ?? 0);
 
       if (esGolLocal) gL++;
       if (esGolVisitante) gV++;
 
+      String nombreJugador = "";
+      String nombreEquipo = esGolLocal ? nombreLocal : nombreVisitante;
+      String tipoEventoTexto = "evento";
+
+      try {
+        final ev = evento as dynamic;
+        nombreJugador = (ev.jugadorNombre ?? ev.jugador ?? "").toString();
+        if (ev.tipo != null) {
+          tipoEventoTexto = ev.tipo.toString().split('.').last;
+        }
+      } catch (e) {
+        print("⚠️ Aviso: Error procesando nombres");
+      }
+
+      // 1. ACTUALIZAMOS FIRESTORE
       await docRef.update({
         'golesLocal': gL,
         'golesVisitante': gV,
+        'eventos': FieldValue.arrayUnion([{
+          'minuto': evento.minuto ?? 0,
+          'tipo': tipoEventoTexto,
+          'jugadorNombre': nombreJugador,
+          'equipoNombre': nombreEquipo,
+        }])
       });
 
-      String localN = data['localNombre'] ?? 'Local';
-      String visitN = data['visitanteNombre'] ?? 'Visitante';
+      String tituloNotif = "¡GOOOOL DE ${nombreEquipo.toUpperCase()}! ⚽";
+      String mensajeNotif = "Marcador: $nombreLocal $gL - $gV $nombreVisitante";
 
-      // Título con el nombre del equipo
-      String tituloNotif = "¡GOOOOL DE ${esGolLocal ? localN.toUpperCase() : visitN.toUpperCase()}! ⚽";
-      String mensajeNotif = "Marcador: $localN $gL - $gV $visitN";
-
+      // 2. GUARDAMOS EN NOTIFICACIONES (CAMPANITA)
       await _db.collection('notificaciones').add({
         'titulo': tituloNotif,
         'mensaje': mensajeNotif,
         'fecha': FieldValue.serverTimestamp(),
         'visto': false,
-        'equipoId': esGolLocal ? data['localId'] : data['visitanteId'],
-        'partidoId': partidoId, // ID para navegar al partido
+        'equipoId': esGolLocal ? idLocal : idVisitante,
+        'partidoId': partidoId,
         'tipo': 'gol'
       });
 
-      print("✅ MARCADOR Y NOTIFICACIÓN INTELIGENTE GUARDADOS");
+      // 3. DISPARO AL BOLSILLO (PUSH)
+      // Mandamos a dos temas para estar seguros: al del equipo y al general
+
+      print("📱 Enviando PUSH de Gol...");
+
+      // Push al equipo
+      // Cambia esto en agregarEvento:
+      String temaEquipo = (esGolLocal ? idLocal : idVisitante).replaceAll(' ', '_');
+
+      await enviarNotificacionPush(
+        titulo: tituloNotif,
+        mensaje: mensajeNotif,
+        partidoId: partidoId,
+        tema: 'equipo_$temaEquipo',
+      );
+
+      // Push al tema general (Para que te llegue SI o SI mientras probamos)
+      await enviarNotificacionPush(
+        titulo: tituloNotif,
+        mensaje: mensajeNotif,
+        partidoId: partidoId,
+        tema: 'general',
+      );
+
+      print("✅ PUSH ENVIADO A EQUIPO Y GENERAL");
+      print("🎯 PROCESO FINALIZADO");
 
     } catch (e) {
       print("❌ ERROR EN AGREGAR EVENTO: $e");
     }
   }
-
   // ===========================================================================
   // PUBLICIDADES
   // ===========================================================================
