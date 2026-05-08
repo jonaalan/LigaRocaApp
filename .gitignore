@@ -73,3 +73,16 @@ google-services.json
 GoogleService-Info.plist
 firebase_options.dart
 scripts/serviceAccountKey.json
+
+# Flutter/Android
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+*.utils
+
+# Servidor (Para que no suba la basura pesada del servidor)
+**/funciones_servidor/functions/node_modules/
+**/funciones_servidor/functions/lib/
+**/funciones_servidor/functions/.firebase/
