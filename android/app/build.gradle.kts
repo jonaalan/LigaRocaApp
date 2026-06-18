@@ -41,8 +41,8 @@ android {
         // CORRECCIÓN 3: Subimos el targetSdk al 36
         targetSdk = 36
 
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 4
+        versionName = "1.0.3"
         multiDexEnabled = true
     }
 
