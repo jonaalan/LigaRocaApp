@@ -6,8 +6,6 @@ class AdminPublicidadScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // --- PALETA DARK ESMERALDA ---
-    // Usamos final porque se definen dentro del build
     final Color verdeEsmeralda = const Color(0xFF00C853);
     final Color negroProfundo = const Color(0xFF000000);
     final Color cardColor = const Color(0xFF1E272E);
@@ -43,9 +41,9 @@ class AdminPublicidadScreen extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.all(20.0),
                 child: Text(
-                  "BANNERS ACTIVOS (${docs.length})",
+                  "PUBLICIDADES ACTIVAS (${docs.length})",
                   style: TextStyle(
-                      color: verdeEsmeralda, // Sin const aquí
+                      color: verdeEsmeralda,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                       letterSpacing: 1.1
@@ -62,12 +60,14 @@ class AdminPublicidadScreen extends StatelessWidget {
                     final data = docs[index].data() as Map<String, dynamic>;
                     final id = docs[index].id;
                     final String imageUrl = data['url'] ?? '';
+                    final bool esIntersticial = data['esIntersticial'] ?? false;
 
                     return Card(
                       color: cardColor,
                       margin: const EdgeInsets.only(bottom: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       child: ListTile(
+                        onTap: () => _mostrarDialogoPublicidad(context, id: id, data: data),
                         leading: ClipRRect(
                           borderRadius: BorderRadius.circular(6),
                           child: imageUrl.isNotEmpty
@@ -78,11 +78,20 @@ class AdminPublicidadScreen extends StatelessWidget {
                           )
                               : const Icon(Icons.image, color: Colors.white24),
                         ),
-                        title: Text(data['nombre'] ?? 'Sponsor',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                        title: Row(
+                          children: [
+                            Expanded(child: Text(data['nombre'] ?? 'Sponsor',
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14))),
+                            if (esIntersticial)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(color: Colors.orange, borderRadius: BorderRadius.circular(4)),
+                                child: const Text("PANTALLA COMPLETA", style: TextStyle(color: Colors.black, fontSize: 8, fontWeight: FontWeight.bold)),
+                              ),
+                          ],
+                        ),
                         subtitle: Text(
                           data['link'] ?? 'Sin link',
-                          // CORREGIDO: Se quitó el 'const' porque usa la variable verdeEsmeralda
                           style: TextStyle(color: verdeEsmeralda, fontSize: 11),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -102,7 +111,7 @@ class AdminPublicidadScreen extends StatelessWidget {
                   width: double.infinity,
                   height: 55,
                   child: ElevatedButton.icon(
-                    onPressed: () => _mostrarDialogoAgregar(context),
+                    onPressed: () => _mostrarDialogoPublicidad(context),
                     icon: const Icon(Icons.add_photo_alternate, color: Colors.black),
                     label: const Text(
                       'AGREGAR NUEVA PUBLICIDAD',
@@ -122,51 +131,68 @@ class AdminPublicidadScreen extends StatelessWidget {
     );
   }
 
-  // --- MÉTODOS DE APOYO (Dialogos) ---
-
-  void _mostrarDialogoAgregar(BuildContext context) {
-    final nombreCtrl = TextEditingController();
-    final urlCtrl = TextEditingController();
-    final linkCtrl = TextEditingController();
+  void _mostrarDialogoPublicidad(BuildContext context, {String? id, Map<String, dynamic>? data}) {
+    final nombreCtrl = TextEditingController(text: data?['nombre']);
+    final urlCtrl = TextEditingController(text: data?['url']);
+    final linkCtrl = TextEditingController(text: data?['link']);
+    bool esIntersticial = data?['esIntersticial'] ?? false;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E272E),
-        title: const Text("Nueva Publicidad", style: TextStyle(color: Colors.white, fontSize: 18)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildField(nombreCtrl, "Nombre del Sponsor"),
-              const SizedBox(height: 15),
-              _buildField(urlCtrl, "URL de la Imagen"),
-              const SizedBox(height: 15),
-              _buildField(linkCtrl, "Link de destino (URL)"),
-            ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          backgroundColor: const Color(0xFF1E272E),
+          title: Text(id == null ? "Nueva Publicidad" : "Editar Publicidad", style: const TextStyle(color: Colors.white, fontSize: 18)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildField(nombreCtrl, "Nombre del Sponsor"),
+                const SizedBox(height: 15),
+                _buildField(urlCtrl, "URL de la Imagen"),
+                const SizedBox(height: 15),
+                _buildField(linkCtrl, "Link de destino (URL)"),
+                const SizedBox(height: 15),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text("Publicidad Pantalla Completa (Intersticial)", style: TextStyle(color: Colors.white, fontSize: 13)),
+                  subtitle: const Text("Se mostrará al cambiar de pantalla", style: TextStyle(color: Colors.white38, fontSize: 11)),
+                  value: esIntersticial,
+                  activeColor: const Color(0xFF00C853),
+                  onChanged: (val) => setState(() => esIntersticial = val),
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancelar", style: TextStyle(color: Colors.white38))
+            ),
+            ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00C853)),
+                onPressed: () async {
+                  if (nombreCtrl.text.isNotEmpty && urlCtrl.text.isNotEmpty) {
+                    final payload = {
+                      'nombre': nombreCtrl.text.trim(),
+                      'url': urlCtrl.text.trim(),
+                      'link': linkCtrl.text.trim(),
+                      'esIntersticial': esIntersticial,
+                      'fecha': data?['fecha'] ?? Timestamp.now(),
+                    };
+
+                    if (id == null) {
+                      await FirebaseFirestore.instance.collection('publicidad').add(payload);
+                    } else {
+                      await FirebaseFirestore.instance.collection('publicidad').doc(id).update(payload);
+                    }
+                    if (context.mounted) Navigator.pop(context);
+                  }
+                },
+                child: Text(id == null ? "Guardar" : "Actualizar", style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold))
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancelar", style: TextStyle(color: Colors.white38))
-          ),
-          ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00C853)),
-              onPressed: () async {
-                if (nombreCtrl.text.isNotEmpty && urlCtrl.text.isNotEmpty) {
-                  await FirebaseFirestore.instance.collection('publicidad').add({
-                    'nombre': nombreCtrl.text.trim(),
-                    'url': urlCtrl.text.trim(),
-                    'link': linkCtrl.text.trim(),
-                    'fecha': Timestamp.now(),
-                  });
-                  if (context.mounted) Navigator.pop(context);
-                }
-              },
-              child: const Text("Guardar", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold))
-          ),
-        ],
       ),
     );
   }

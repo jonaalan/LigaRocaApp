@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../services/firestore_service.dart';
+import '../../models/equipo.dart'; // IMPORTANTE: Añadimos el modelo
 
 class AdminCrearEquipoScreen extends StatefulWidget {
-  const AdminCrearEquipoScreen({super.key});
+  final Equipo? equipo; // Añadimos este campo para edición
+  const AdminCrearEquipoScreen({super.key, this.equipo});
 
   @override
   State<AdminCrearEquipoScreen> createState() => _AdminCrearEquipoScreenState();
@@ -20,20 +22,38 @@ class _AdminCrearEquipoScreenState extends State<AdminCrearEquipoScreen> {
   static final Color negroProfundo = const Color(0xFF000000);
   static final Color cardColor = const Color(0xFF1E272E);
 
+  @override
+  void initState() {
+    super.initState();
+    // Si estamos editando, precargamos los datos
+    if (widget.equipo != null) {
+      _nombreController.text = widget.equipo!.nombre;
+      _escudoUrlController.text = widget.equipo!.escudoUrl;
+    }
+  }
+
   Future<void> _guardarEquipo() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
       try {
-        // CORRECCIÓN AQUÍ: Pasamos los argumentos sin los nombres 'nombre:' y 'escudoUrl:'
-        // porque tu servicio los espera como argumentos posicionales.
-        await _firestoreService.crearEquipo(
-          _nombreController.text.trim(),
-          _escudoUrlController.text.trim(),
-        );
+        if (widget.equipo == null) {
+          // CREAR NUEVO
+          await _firestoreService.crearEquipo(
+            _nombreController.text.trim(),
+            _escudoUrlController.text.trim(),
+          );
+        } else {
+          // EDITAR EXISTENTE
+          await _firestoreService.actualizarEquipo(
+            widget.equipo!.id,
+            _nombreController.text.trim(),
+            _escudoUrlController.text.trim(),
+          );
+        }
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Equipo creado con éxito'))
+              SnackBar(content: Text(widget.equipo == null ? 'Equipo creado con éxito' : 'Equipo actualizado con éxito'))
           );
           Navigator.pop(context);
         }
@@ -54,7 +74,8 @@ class _AdminCrearEquipoScreenState extends State<AdminCrearEquipoScreen> {
     return Scaffold(
       backgroundColor: negroProfundo,
       appBar: AppBar(
-        title: const Text('NUEVO EQUIPO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        title: Text(widget.equipo == null ? 'NUEVO EQUIPO' : 'EDITAR EQUIPO',
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         backgroundColor: const Color(0xFF051209),
         foregroundColor: Colors.white,
       ),
@@ -82,7 +103,8 @@ class _AdminCrearEquipoScreenState extends State<AdminCrearEquipoScreen> {
                 child: ElevatedButton.icon(
                   onPressed: _guardarEquipo,
                   icon: const Icon(Icons.save, color: Colors.black),
-                  label: const Text('GUARDAR EQUIPO', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                  label: Text(widget.equipo == null ? 'GUARDAR EQUIPO' : 'ACTUALIZAR EQUIPO',
+                      style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: verdeEsmeralda,
                     padding: const EdgeInsets.symmetric(vertical: 16),

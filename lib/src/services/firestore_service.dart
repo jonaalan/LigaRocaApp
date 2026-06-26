@@ -20,11 +20,34 @@ class FirestoreService {
   Future<void> enviarNotificacionPush({
     required String titulo,
     required String mensaje,
-    required String partidoId,
+    String? partidoId,
     String tema = 'general',
   }) async {
     // Ya no hace nada aquí porque el servidor lo hace solo.
     print("📢 Notificación registrada internamente para: $tema");
+  }
+
+  Future<void> enviarNotificacionGeneral({
+    required String titulo,
+    required String mensaje,
+    String? equipoId,
+  }) async {
+    await _db.collection('notificaciones').add({
+      'titulo': titulo,
+      'mensaje': mensaje,
+      'fecha': FieldValue.serverTimestamp(),
+      'visto': false,
+      'tipo': equipoId == null ? 'general' : 'equipo',
+      'equipoId': equipoId,
+    });
+
+    String tema = equipoId == null ? 'general' : 'equipo_${equipoId.replaceAll(' ', '_')}';
+
+    await enviarNotificacionPush(
+      titulo: titulo,
+      mensaje: mensaje,
+      tema: tema,
+    );
   }
   // ===========================================================================
   // SUSCRIPCIÓN A NOTIFICACIONES

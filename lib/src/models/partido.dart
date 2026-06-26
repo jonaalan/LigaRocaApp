@@ -30,13 +30,14 @@ class Partido {
   final int golesLocal;
   final int golesVisitante;
   final EstadoPartido estado;
-  final int numeroFecha;
+  final String numeroFecha;
   final String categoria;
 
   Partido({
     required this.id, required this.local, required this.visitante, required this.fecha,
     this.golesLocal = 0, this.golesVisitante = 0, this.estado = EstadoPartido.pendiente,
-    this.numeroFecha = 0, this.categoria = 'Primera',
+    this.numeroFecha = "1",
+    this.categoria = 'Primera',
   });
 
   bool get finalizado => estado == EstadoPartido.finalizado;
@@ -63,7 +64,7 @@ class Partido {
       golesLocal: int.tryParse(data['golesLocal'].toString()) ?? 0,
       golesVisitante: int.tryParse(data['golesVisitante'].toString()) ?? 0,
       estado: estadoFinal,
-      numeroFecha: int.tryParse(data['numeroFecha'].toString()) ?? 0,
+      numeroFecha: data['numeroFecha']?.toString() ?? '1',
       categoria: data['categoria'] ?? 'Primera',
     );
   }

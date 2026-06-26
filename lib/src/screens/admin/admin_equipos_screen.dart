@@ -52,9 +52,23 @@ class AdminEquiposScreen extends StatelessWidget {
                         : const Icon(Icons.shield, color: Colors.white10),
                   ),
                   title: Text(equipo.nombre, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
-                    onPressed: () => _confirmarEliminar(context, equipo.id, equipo.nombre),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined, color: Colors.blueAccent, size: 20),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => AdminCrearEquipoScreen(equipo: equipo)),
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                        onPressed: () => _confirmarEliminar(context, equipo.id, equipo.nombre),
+                      ),
+                    ],
                   ),
                 ),
               );

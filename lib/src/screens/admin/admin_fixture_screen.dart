@@ -61,7 +61,7 @@ class _AdminFixtureScreenState extends State<AdminFixtureScreen> {
                   ),
                   subtitle: Padding(
                     padding: const EdgeInsets.only(top: 8),
-                    child: Text("${p.categoria.toUpperCase()} - FECHA ${p.numeroFecha} ${enVivo ? '• EN VIVO' : ''}",
+                    child: Text("${p.categoria.toUpperCase()} - ${p.numeroFecha.toUpperCase()} ${enVivo ? '• EN VIVO' : ''}",
                         textAlign: TextAlign.center, style: TextStyle(color: enVivo ? verdeEsmeralda : Colors.white38, fontSize: 10)),
                   ),
                 ),
@@ -133,7 +133,8 @@ class _DialogoPartidoState extends State<_DialogoPartido> {
   void initState() {
     super.initState();
     if (widget.partido != null) {
-      final p = widget.partido!; nroCtrl.text = p.numeroFecha.toString(); cat = p.categoria; fecha = p.fecha; hora = TimeOfDay.fromDateTime(p.fecha);
+      final p = widget.partido!; nroCtrl.text = p.numeroFecha;
+      cat = p.categoria; fecha = p.fecha; hora = TimeOfDay.fromDateTime(p.fecha);
       try { el = widget.equipos.firstWhere((e) => e.nombre == p.local.nombre); ev = widget.equipos.firstWhere((e) => e.nombre == p.visitante.nombre); } catch (_) {}
     }
   }
@@ -146,7 +147,7 @@ class _DialogoPartidoState extends State<_DialogoPartido> {
       content: SingleChildScrollView(
         child: Column(
           children: [
-            TextField(controller: nroCtrl, decoration: const InputDecoration(labelText: "Nro Fecha", labelStyle: TextStyle(color: Colors.white70)), style: const TextStyle(color: Colors.white), keyboardType: TextInputType.number),
+            TextField(controller: nroCtrl, decoration: const InputDecoration(labelText: "Nro Fecha (o texto ej: Final)", labelStyle: TextStyle(color: Colors.white70)), style: const TextStyle(color: Colors.white), keyboardType: TextInputType.text),
             DropdownButtonFormField<String>(
               dropdownColor: const Color(0xFF1E272E), value: widget.categorias.contains(cat) ? cat : null,
               items: [...widget.categorias.map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(color: Colors.white)))), const DropdownMenuItem(value: "OTRA", child: Text("NUEVA..."))],
@@ -183,9 +184,8 @@ class _DialogoPartidoState extends State<_DialogoPartido> {
     final fCat = nuevaCat ? otraCat.text : cat;
     final fFecha = DateTime(fecha.year, fecha.month, fecha.day, hora.hour, hora.minute);
 
-    // REGLA DE ORO: Goles SIEMPRE como Enteros para que la reactividad de Firebase funcione
     final data = {
-      'numeroFecha': int.tryParse(nroCtrl.text) ?? 1,
+      'numeroFecha': nroCtrl.text,
       'categoria': fCat,
       'fecha': Timestamp.fromDate(fFecha),
       'local': {'nombre': el!.nombre, 'escudoUrl': el!.escudoUrl},

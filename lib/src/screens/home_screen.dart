@@ -7,13 +7,15 @@ import '../widgets/noticias_feed.dart';
 import 'fixture_screen.dart';
 import 'tabla_posiciones_screen.dart';
 import 'notificaciones_screen.dart';
-import '../widgets/publicidad_banner.dart'; // <--- IMPORTACIÓN CORRECTA
+import '../widgets/publicidad_banner.dart';
+import '../widgets/publicidad_intersticial.dart'; // <--- IMPORTACIÓN INTERSTICIAL
 
 // --- IMPORTACIONES DE ADMIN ---
 import 'admin/admin_noticias_screen.dart';
 import 'admin/admin_fixture_screen.dart';
 import 'admin/admin_equipos_screen.dart';
 import 'admin/admin_publicidad_screen.dart';
+import 'admin/admin_notificaciones_screen.dart'; // <--- NUEVA IMPORTACIÓN
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -97,6 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
               _itemAdmin(Icons.calendar_today, 'Gestionar Fixture', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminFixtureScreen()))),
               _itemAdmin(Icons.shield, 'Gestionar Equipos', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminEquiposScreen()))),
               _itemAdmin(Icons.ads_click, 'Gestionar Publicidad', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminPublicidadScreen()))),
+              _itemAdmin(Icons.notifications_active, 'Enviar Notificación', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminNotificacionesScreen()))),
               const SizedBox(height: 20),
             ],
           ),
@@ -194,7 +197,13 @@ class _HomeScreenState extends State<HomeScreen> {
         data: Theme.of(context).copyWith(canvasColor: _verdeMuyOscuro),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
-          onTap: (index) => setState(() => _currentIndex = index),
+          onTap: (index) {
+            if (_currentIndex != index) {
+              setState(() => _currentIndex = index);
+              // Disparamos el intento de mostrar publicidad
+              PublicidadIntersticial.intentarMostrar(context);
+            }
+          },
           backgroundColor: _verdeMuyOscuro,
           selectedItemColor: _verdeEsmeralda,
           unselectedItemColor: Colors.white54,

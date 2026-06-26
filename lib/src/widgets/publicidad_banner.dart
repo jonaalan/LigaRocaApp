@@ -51,8 +51,11 @@ class _PublicidadBannerState extends State<PublicidadBanner> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
-      // Leemos directamente la colección donde guarda el administrador
-      stream: FirebaseFirestore.instance.collection('publicidad').snapshots(),
+      // Filtramos para mostrar solo las que NO son de pantalla completa en el banner inferior
+      stream: FirebaseFirestore.instance
+          .collection('publicidad')
+          .where('esIntersticial', isNotEqualTo: true)
+          .snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return const SizedBox.shrink();
