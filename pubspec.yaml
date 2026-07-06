@@ -1,7 +1,7 @@
 name: liga_roca
 description: App de futbol Liga Roca con noticias y fixture.
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.5+6
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -9,7 +9,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-    # Iconos
   cupertino_icons: ^1.0.2
   
   # Estado y Utilidades
@@ -17,7 +16,7 @@ dependencies:
   intl: ^0.18.0
   url_launcher: ^6.2.0
   
-  # Firebase (Últimas versiones compatibles con Flutter 3.x)
+  # Firebase
   firebase_core: ^3.1.0
   firebase_auth: ^5.1.0
   cloud_firestore: ^5.0.1
@@ -38,7 +37,7 @@ flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
   image_path: "assets/icon/Chitologo1024.png"
-  min_sdk_android: 21 # Opcional, para asegurar compatibilidad
+  min_sdk_android: 21
 
 flutter:
   uses-material-design: true

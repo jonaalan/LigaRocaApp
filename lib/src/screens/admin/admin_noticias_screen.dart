@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/noticia.dart';
-// REGLA DE ORO: Importación directa ya que están en la misma carpeta
 import 'admin_crear_noticia_screen.dart';
 
 class AdminNoticiasScreen extends StatelessWidget {
-  const AdminNoticiasScreen({super.key});
+  final String? rol;
+  final String? equipoId;
+  final String? equipoNombre;
+
+  const AdminNoticiasScreen({super.key, this.rol, this.equipoId, this.equipoNombre});
 
   @override
   Widget build(BuildContext context) {
@@ -13,6 +16,15 @@ class AdminNoticiasScreen extends StatelessWidget {
     const Color negroProfundo = Color(0xFF000000);
     const Color cardColor = Color(0xFF1E272E);
     const Color verdeMuyOscuro = Color(0xFF051209);
+
+    Query query = FirebaseFirestore.instance.collection('noticias');
+
+    // Si es prensa, solo ve las noticias de su equipo
+    if (rol == 'prensa' && equipoId != null) {
+      query = query.where('equipoId', isEqualTo: equipoId);
+    }
+
+    query = query.orderBy('fecha', descending: true);
 
     return Scaffold(
       backgroundColor: negroProfundo,
@@ -26,7 +38,7 @@ class AdminNoticiasScreen extends StatelessWidget {
         elevation: 0,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('noticias').orderBy('fecha', descending: true).snapshots(),
+        stream: query.snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.white)));
@@ -36,6 +48,10 @@ class AdminNoticiasScreen extends StatelessWidget {
           }
 
           final docs = snapshot.data?.docs ?? [];
+
+          if (docs.isEmpty) {
+            return const Center(child: Text("No hay noticias para mostrar", style: TextStyle(color: Colors.white54)));
+          }
 
           return ListView.builder(
             padding: const EdgeInsets.symmetric(vertical: 10),
@@ -48,6 +64,16 @@ class AdminNoticiasScreen extends StatelessWidget {
               final String contenido = data['contenido'] ?? 'Sin contenido';
               final String? imageUrl = data['imageUrl'];
 
+              final noticia = Noticia(
+                id: doc.id,
+                titulo: titulo,
+                contenido: contenido,
+                imageUrl: imageUrl,
+                tipo: data['tipo'] == 'general' ? TipoNoticia.general : TipoNoticia.equipo,
+                equipoId: data['equipoId'],
+                fecha: data['fecha'] != null ? (data['fecha'] as Timestamp).toDate() : DateTime.now(),
+              );
+
               return Card(
                 color: cardColor,
                 margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -56,6 +82,19 @@ class AdminNoticiasScreen extends StatelessWidget {
                   side: BorderSide(color: Colors.white.withOpacity(0.05)),
                 ),
                 child: ListTile(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AdminCrearNoticiaScreen(
+                          noticia: noticia,
+                          rol: rol,
+                          equipoId: equipoId,
+                          equipoNombre: equipoNombre,
+                        ),
+                      ),
+                    );
+                  },
                   leading: imageUrl != null && imageUrl.isNotEmpty
                       ? ClipRRect(
                     borderRadius: BorderRadius.circular(8),
@@ -88,10 +127,15 @@ class AdminNoticiasScreen extends StatelessWidget {
         backgroundColor: verdeEsmeralda,
         child: const Icon(Icons.add, color: Colors.black),
         onPressed: () {
-          // CORRECCIÓN: Quitamos 'const' porque AdminCrearNoticiaScreen tiene controladores internos
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const AdminCrearNoticiaScreen()),
+            MaterialPageRoute(
+              builder: (context) => AdminCrearNoticiaScreen(
+                rol: rol,
+                equipoId: equipoId,
+                equipoNombre: equipoNombre,
+              ),
+            ),
           );
         },
       ),

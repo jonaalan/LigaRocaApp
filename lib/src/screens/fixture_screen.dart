@@ -40,8 +40,9 @@ class FixtureList extends StatelessWidget {
               Expanded(
                 child: TabBarView(
                   children: categorias.map((cat) {
+                    // ORDEN CRONOLÓGICO: Comparamos la fecha real. b (nuevo) vs a (viejo)
                     final filtrados = todos.where((p) => p.categoria == cat).toList()
-                      ..sort((a, b) => b.numeroFecha.compareTo(a.numeroFecha));
+                      ..sort((a, b) => b.fecha.compareTo(a.fecha));
                     return _buildLista(filtrados, verdeEsmeralda, cardColor);
                   }).toList(),
                 ),
@@ -87,7 +88,8 @@ class FixtureList extends StatelessWidget {
                             child: const Text('• EN VIVO', style: TextStyle(color: Colors.black, fontSize: 9, fontWeight: FontWeight.bold)),
                           )
                         else
-                          Text('FECHA ${p.numeroFecha}', style: TextStyle(color: verde, fontSize: 10, fontWeight: FontWeight.bold)),
+                          Text(p.numeroFecha.toUpperCase().contains('FECHA') ? p.numeroFecha.toUpperCase() : 'FECHA ${p.numeroFecha.toUpperCase()}',
+                              style: TextStyle(color: verde, fontSize: 10, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 10),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

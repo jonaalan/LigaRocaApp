@@ -7,15 +7,16 @@ import '../widgets/noticias_feed.dart';
 import 'fixture_screen.dart';
 import 'tabla_posiciones_screen.dart';
 import 'notificaciones_screen.dart';
+import 'beneficios_screen.dart'; // <--- NUEVA IMPORTACIÓN
 import '../widgets/publicidad_banner.dart';
-import '../widgets/publicidad_intersticial.dart'; // <--- IMPORTACIÓN INTERSTICIAL
+import '../widgets/publicidad_intersticial.dart';
 
 // --- IMPORTACIONES DE ADMIN ---
 import 'admin/admin_noticias_screen.dart';
 import 'admin/admin_fixture_screen.dart';
 import 'admin/admin_equipos_screen.dart';
 import 'admin/admin_publicidad_screen.dart';
-import 'admin/admin_notificaciones_screen.dart'; // <--- NUEVA IMPORTACIÓN
+import 'admin/admin_notificaciones_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -31,13 +32,12 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _equipoId;
   String _nombreEquipo = "Mi Equipo";
   bool _loadingUser = true;
-  bool _isAdmin = false;
+  bool _isAnyAdmin = false;
+  String _rolUsuario = "user";
 
   final Color _verdeEsmeralda = const Color(0xFF00C853);
   final Color _negroProfundo = const Color(0xFF000000);
   final Color _verdeMuyOscuro = const Color(0xFF051209);
-  // ignore: unused_field
-  final Color _cardColor = const Color(0xFF1E272E);
 
   @override
   void initState() {
@@ -52,7 +52,8 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           _equipoId = userData['equipoFavoritoId'];
           _nombreEquipo = userData['equipoFavoritoNombre'] ?? "Mi Equipo";
-          _isAdmin = userData['rol'] == 'admin';
+          _rolUsuario = userData['rol'] ?? 'user';
+          _isAnyAdmin = (_rolUsuario == 'admin' || _rolUsuario == 'prensa');
           _loadingUser = false;
         });
       } else {
@@ -63,7 +64,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // FUNCIÓN PARA MOSTRAR EL MENÚ DE ADMIN
   void _mostrarMenuAdmin() {
     showModalBottomSheet(
       context: context,
@@ -87,7 +87,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               Text(
-                  'PANEL DE ADMINISTRACIÓN',
+                  'PANEL DE CONTROL',
                   style: TextStyle(
                       color: _verdeEsmeralda,
                       fontWeight: FontWeight.bold,
@@ -95,11 +95,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   )
               ),
               const SizedBox(height: 20),
-              _itemAdmin(Icons.newspaper, 'Gestionar Noticias', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminNoticiasScreen()))),
-              _itemAdmin(Icons.calendar_today, 'Gestionar Fixture', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminFixtureScreen()))),
-              _itemAdmin(Icons.shield, 'Gestionar Equipos', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminEquiposScreen()))),
-              _itemAdmin(Icons.ads_click, 'Gestionar Publicidad', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminPublicidadScreen()))),
-              _itemAdmin(Icons.notifications_active, 'Enviar Notificación', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminNotificacionesScreen()))),
+
+              _itemAdmin(Icons.newspaper, 'Gestionar Noticias', () => Navigator.push(context, MaterialPageRoute(builder: (_) => AdminNoticiasScreen(rol: _rolUsuario, equipoId: _equipoId, equipoNombre: _nombreEquipo)))),
+
+              if (_rolUsuario == 'admin') ...[
+                _itemAdmin(Icons.calendar_today, 'Gestionar Fixture', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminFixtureScreen()))),
+                _itemAdmin(Icons.shield, 'Gestionar Equipos', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminEquiposScreen()))),
+                _itemAdmin(Icons.ads_click, 'Gestionar Publicidad', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminPublicidadScreen()))),
+                _itemAdmin(Icons.notifications_active, 'Enviar Notificación', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminNotificacionesScreen()))),
+              ],
               const SizedBox(height: 20),
             ],
           ),
@@ -114,8 +118,8 @@ class _HomeScreenState extends State<HomeScreen> {
       title: Text(titulo, style: const TextStyle(color: Colors.white)),
       trailing: const Icon(Icons.chevron_right, color: Colors.white24),
       onTap: () {
-        Navigator.pop(context); // Cierra el menu
-        onTap(); // Abre la pantalla
+        Navigator.pop(context);
+        onTap();
       },
     );
   }
@@ -131,6 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final List<Widget> _paginas = [
       NoticiasFeed(equipoId: _equipoId, nombreEquipo: _nombreEquipo),
+      const BeneficiosScreen(), // <--- NUEVA PESTAÑA AGREGADA AQUÍ
       const FixtureList(),
       const TablaPosicionesScreen(),
     ];
@@ -148,10 +153,9 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_none, color: Colors.white),
-            // Busca esta línea y QUITA la palabra 'const' antes de NotificacionesScreen()
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => NotificacionesScreen())),
           ),
-          if (_isAdmin)
+          if (_isAnyAdmin)
             IconButton(
               icon: Icon(Icons.admin_panel_settings, color: _verdeEsmeralda),
               onPressed: _mostrarMenuAdmin,
@@ -168,31 +172,32 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [_verdeMuyOscuro, _negroProfundo],
-          ),
-        ),
-        // STACK: Permite que el banner flote sobre las páginas
-        child: Stack(
-          children: [
-            // El contenido de la pestaña seleccionada
-            _paginas[_currentIndex],
-
-            // El Banner flotando abajo de la pantalla
-            const Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: PublicidadBanner(),
+      // Busca esta parte en tu home_screen.dart y reemplázala:
+            body: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [_verdeMuyOscuro, _negroProfundo],
+                ),
+              ),
+              child: Stack(
+                children: [
+                  // CAMBIO AQUÍ: Usamos IndexedStack para mantener el estado de las pestañas
+                  IndexedStack(
+                    index: _currentIndex,
+                    children: _paginas,
+                  ),
+                  const Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: PublicidadBanner(),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
-      ),
       bottomNavigationBar: Theme(
         data: Theme.of(context).copyWith(canvasColor: _verdeMuyOscuro),
         child: BottomNavigationBar(
@@ -200,7 +205,6 @@ class _HomeScreenState extends State<HomeScreen> {
           onTap: (index) {
             if (_currentIndex != index) {
               setState(() => _currentIndex = index);
-              // Disparamos el intento de mostrar publicidad
               PublicidadIntersticial.intentarMostrar(context);
             }
           },
@@ -210,6 +214,7 @@ class _HomeScreenState extends State<HomeScreen> {
           type: BottomNavigationBarType.fixed,
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.article), label: 'NOTICIAS'),
+            BottomNavigationBarItem(icon: Icon(Icons.wallet_giftcard), label: 'BENEFICIOS'), // <--- NUEVO ÍCONO
             BottomNavigationBarItem(icon: Icon(Icons.calendar_month), label: 'FIXTURE'),
             BottomNavigationBarItem(icon: Icon(Icons.emoji_events), label: 'TABLA'),
           ],

@@ -30,7 +30,9 @@ class _AdminFixtureScreenState extends State<AdminFixtureScreen> {
         stream: firestoreService.getPartidos(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) return Center(child: CircularProgressIndicator(color: verdeEsmeralda));
-          final partidos = snapshot.data!..sort((a, b) => b.numeroFecha.compareTo(a.numeroFecha));
+
+          // ORDEN CRONOLÓGICO: Comparamos la fecha real. b (nuevo) vs a (viejo)
+          final partidos = snapshot.data!..sort((a, b) => b.fecha.compareTo(a.fecha));
 
           return ListView.builder(
             padding: const EdgeInsets.all(12),
